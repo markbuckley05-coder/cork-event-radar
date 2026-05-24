@@ -89,27 +89,42 @@ function sourceIdentity(source) {
   return normalizeSearchText(source.url || source.name || "");
 }
 
+function activityTermsFor(value) {
+  const term = normalizeSearchText(value);
+  const aliases = {
+    soccer: ["soccer", "football", "football club", "fc", "afc", "league of ireland"],
+    football: ["football", "soccer", "football club", "fc", "afc", "league of ireland"],
+  };
+  return [...new Set([term, ...(aliases[term] || [])].filter(Boolean))];
+}
+
 function activityDiscoveryQueries(candidate) {
   const name = cleanText(candidate.name);
   const category = candidate.category || "festival";
+  const terms = activityTermsFor(name);
   const templates = {
-    sport: [
-      `${name} Cork fixtures results`,
-      `${name} Cork club fixtures`,
-      `${name} Munster fixtures results`,
-      `${name} Cork matches`,
+    sport: (term) => [
+      `${term} Cork events`,
+      `${term} Cork clubs`,
+      `${term} Cork fixtures results`,
+      `${term} Cork club fixtures`,
+      `${term} Cork calendar`,
+      `${term} Munster fixtures results`,
+      `${term} Cork matches`,
     ],
-    trad: [`${name} Cork events`, `${name} Cork sessions`, `${name} Cork festival`],
-    music: [`${name} Cork gigs`, `${name} Cork concerts`, `${name} Cork events`],
-    arts: [`${name} Cork theatre`, `${name} Cork performance`, `${name} Cork events`],
-    markets: [`${name} Cork market`, `${name} Cork events`],
+    trad: (term) => [`${term} Cork events`, `${term} Cork sessions`, `${term} Cork festival`],
+    music: (term) => [`${term} Cork gigs`, `${term} Cork concerts`, `${term} Cork events`],
+    arts: (term) => [`${term} Cork theatre`, `${term} Cork performance`, `${term} Cork events`],
+    markets: (term) => [`${term} Cork market`, `${term} Cork events`],
   };
-  return templates[category] || [`${name} Cork events`, `${name} Cork what's on`];
+  const builder = templates[category] || ((term) => [`${term} Cork events`, `${term} Cork what's on`]);
+  return terms.flatMap((term) => builder(term));
 }
 
 function activityDiscoverySourcesForCandidate(candidate) {
   if (!isActivitySearchPrompt(candidate.name, candidate.category)) return [];
-  return activityDiscoveryQueries(candidate).slice(0, 4).map((query) => ({
+  const searchTerms = activityTermsFor(candidate.name);
+  return activityDiscoveryQueries(candidate).slice(0, 12).map((query) => ({
     name: `Activity discovery: ${query}`,
     url: `https://duckduckgo.com/html/?q=${encodeURIComponent(query)}`,
     area: candidate.area || "county",
@@ -118,6 +133,7 @@ function activityDiscoverySourcesForCandidate(candidate) {
     learned: true,
     learnedActivityDiscovery: true,
     searchTerm: candidate.name,
+    searchTerms,
   }));
 }
 
@@ -143,6 +159,8 @@ function getActiveSources(searchQuery = "") {
       url: source.url,
       area: source.area || "county",
       category: source.category || "festival",
+      searchTerm: source.searchTerm || "",
+      searchTerms: source.searchTerms || [],
       learned: true,
     }));
   const searchableCandidates = learning.candidates
@@ -171,6 +189,7 @@ function getActiveSources(searchQuery = "") {
           learned: true,
           learnedSearch: true,
           searchTerm: candidate.name,
+          searchTerms: activityTermsFor(candidate.name),
         },
         {
           name: `Learned Eventbrite search: ${candidate.name}`,
@@ -180,6 +199,7 @@ function getActiveSources(searchQuery = "") {
           learned: true,
           learnedSearch: true,
           searchTerm: candidate.name,
+          searchTerms: activityTermsFor(candidate.name),
         },
       ];
       if (isActivitySearchPrompt(candidate.name, category)) {
@@ -192,6 +212,7 @@ function getActiveSources(searchQuery = "") {
             learned: true,
             learnedSearch: true,
             searchTerm: candidate.name,
+            searchTerms: activityTermsFor(candidate.name),
           },
           {
             name: `Learned Meetup search: ${candidate.name}`,
@@ -201,6 +222,7 @@ function getActiveSources(searchQuery = "") {
             learned: true,
             learnedSearch: true,
             searchTerm: candidate.name,
+            searchTerms: activityTermsFor(candidate.name),
           }
         );
       }
@@ -343,6 +365,13 @@ function containsTerm(text, term) {
   return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, "i").test(text);
 }
 
+function matchesTerm(text, term) {
+  const normalizedTerm = normalizeSearchText(term);
+  const compactText = normalizeSearchText(text).replace(/\s+/g, "");
+  const compactTerm = normalizedTerm.replace(/\s+/g, "");
+  return containsTerm(text, normalizedTerm) || (compactTerm.length >= 5 && compactText.includes(compactTerm));
+}
+
 function categorySearchTerms(category) {
   const terms = {
     sport: "fixture OR match OR game OR club OR tournament",
@@ -387,7 +416,7 @@ function isActivitySearchPrompt(value, category) {
     "ceili",
     "fleadh",
   ];
-  return category !== "festival" && activityTerms.some((term) => containsTerm(text, normalizeSearchText(term)));
+  return category !== "festival" && activityTerms.some((term) => matchesTerm(text, term));
 }
 
 function inferCategory(text, fallback, sourceName = "") {
@@ -426,7 +455,7 @@ function inferCategory(text, fallback, sourceName = "") {
     "ceol chorcai",
     "ceol chorcaí",
   ];
-  if (fallback === "trad" || tradTerms.some((term) => containsTerm(haystack, term))) return "trad";
+  if (fallback === "trad" || tradTerms.some((term) => matchesTerm(haystack, term))) return "trad";
   if (/\b(fc|afc|rovers|rangers|united|wanderers|ramblers|athletic)\b/i.test(haystack)) return "sport";
 
   const tests = [
@@ -465,6 +494,10 @@ function inferCategory(text, fallback, sourceName = "") {
         "martial arts",
         "hockey",
         "cricket",
+        "athletic",
+        "united",
+        "ramblers",
+        "rovers",
         "badminton",
         "sailing",
         "triathlon",
@@ -478,7 +511,7 @@ function inferCategory(text, fallback, sourceName = "") {
     ["arts", ["theatre", "theater", "opera", "comedy", "arts", "film", "exhibition", "kabuki", "drama", "dance performance"]],
     ["festival", ["festival", "fest"]],
   ];
-  const match = tests.find(([, words]) => words.some((word) => containsTerm(haystack, word)));
+  const match = tests.find(([, words]) => words.some((word) => matchesTerm(haystack, word)));
   return match ? match[0] : fallback || "festival";
 }
 
@@ -599,6 +632,7 @@ function extractHeuristicEvents(html, source) {
     const href = match[1];
     const label = cleanText(match[2]);
     if (label.length < 8 || label.length > 140) continue;
+    if (/https?:\/\//i.test(label) || /\bwww\./i.test(label)) continue;
     if (genericLabels.has(label.toLowerCase())) continue;
     if (/\/categories\/|#|mailto:|tel:/i.test(href)) continue;
 
@@ -723,9 +757,10 @@ function extractKnownTextEvents(html, source) {
 
 function learnedSearchTermMatches(event, source) {
   if (!source.learnedSearch || !source.searchTerm) return true;
-  const term = normalizeSearchText(source.searchTerm);
+  const terms = source.searchTerms?.length ? source.searchTerms : activityTermsFor(source.searchTerm);
   const haystack = normalizeSearchText([event.title, event.summary, event.location, event.url, ...(event.tags || [])].join(" "));
-  return containsTerm(haystack, term);
+  if (isNegativeActivityMatch(haystack, source.searchTerm)) return false;
+  return terms.some((term) => matchesTerm(haystack, term));
 }
 
 function filterLearnedSearchEvents(events, source) {
@@ -734,10 +769,20 @@ function filterLearnedSearchEvents(events, source) {
 
 function isRelevantDiscoveredSource(text, source) {
   const haystack = normalizeSearchText([text, source.url].join(" "));
-  const term = normalizeSearchText(source.searchTerm);
+  const terms = source.searchTerms?.length ? source.searchTerms : activityTermsFor(source.searchTerm);
   const corkSignal = /\b(cork|munster|west cork|cork city|county cork)\b/i.test(haystack);
   const sourceSignal = /\b(fixtures?|results?|matches?|events?|club|league|calendar|whats on|what s on|tickets?)\b/i.test(haystack);
-  return containsTerm(haystack, term) && corkSignal && sourceSignal;
+  const activitySignal = terms.some((term) => matchesTerm(haystack, term));
+  if (isNegativeActivityMatch(haystack, source.searchTerm)) return false;
+  return activitySignal && corkSignal && (sourceSignal || source.category === "sport");
+}
+
+function isNegativeActivityMatch(haystack, activity) {
+  const term = normalizeSearchText(activity);
+  if (term === "soccer" || term === "football") {
+    return /\b(gaa|gaelic|hurling|camogie|rugby|american football)\b/i.test(haystack);
+  }
+  return false;
 }
 
 function sourceNameFromPage(url, pageText, fallback) {
@@ -804,7 +849,7 @@ async function fetchHtml(url, accept = "text/html,application/xhtml+xml,applicat
 async function fetchDiscoverySource(source) {
   try {
     const searchHtml = await fetchHtml(source.url);
-    const links = extractDiscoveryLinks(searchHtml, source.url).slice(0, 5);
+    const links = extractDiscoveryLinks(searchHtml, source.url).slice(0, 8);
     const results = await Promise.all(
       links.map(async (url) => {
         const discovered = {
@@ -814,6 +859,7 @@ async function fetchDiscoverySource(source) {
           category: source.category,
           learnedSearch: true,
           searchTerm: source.searchTerm,
+          searchTerms: source.searchTerms || activityTermsFor(source.searchTerm),
         };
         try {
           const html = await fetchHtml(url);
@@ -833,6 +879,7 @@ async function fetchDiscoverySource(source) {
                   area: inferArea(pageText, source.area),
                   category: source.category,
                   searchTerm: source.searchTerm,
+                  searchTerms: source.searchTerms || activityTermsFor(source.searchTerm),
                   evidenceTitle: events[0]?.title || `${source.searchTerm} source discovered from search`,
                 }
               : null,
@@ -906,7 +953,7 @@ async function fetchSource(source) {
 function eventMatchesQuery(event, params) {
   const q = normalizeSearchText(params.get("q") || "");
   if (!q) return true;
-  const haystack = normalizeSearchText([event.title, event.summary, event.location, event.source, event.category, ...(event.tags || [])].join(" "));
+  const haystack = normalizeSearchText([event.title, event.summary, event.location, event.category, ...(event.tags || [])].join(" "));
   return haystack.includes(q) || haystack.replace(/\s+/g, "").includes(q.replace(/\s+/g, ""));
 }
 
@@ -1161,6 +1208,47 @@ function suggestionName(value, url) {
   }
 }
 
+function sourceUrlVariants(url) {
+  try {
+    const parsed = new URL(url);
+    const root = `${parsed.origin}/`;
+    return [
+      url,
+      root,
+      new URL("events/", root).toString(),
+      new URL("fixtures/", root).toString(),
+      new URL("resultsfixtures/", root).toString(),
+      new URL("fixtures-results/", root).toString(),
+      new URL("whats-on/", root).toString(),
+    ].filter((item, index, list) => list.indexOf(item) === index);
+  } catch {
+    return [url];
+  }
+}
+
+async function testSuggestedSource(source) {
+  const variants = sourceUrlVariants(source.url);
+  const attempts = [];
+
+  for (const url of variants) {
+    const candidate = { ...source, url };
+    const result = await fetchSource(candidate);
+    attempts.push({ url, ok: result.ok, error: result.error || "", count: result.events?.length || 0 });
+    if (result.ok && result.events.length) return { source: candidate, result, attempts };
+  }
+
+  const firstOk = attempts.find((attempt) => attempt.ok);
+  return {
+    source: firstOk ? { ...source, url: firstOk.url } : source,
+    result: {
+      ok: Boolean(firstOk),
+      error: firstOk ? "" : attempts[0]?.error || "Could not fetch source",
+      events: [],
+    },
+    attempts,
+  };
+}
+
 function splitSuggestions(value) {
   return cleanText(value)
     .split(/\n|;/)
@@ -1245,6 +1333,8 @@ function mergeLearnedSource(learning, source, evidence) {
     existing.name = source.name || existing.name;
     existing.area = source.area || existing.area || "county";
     existing.category = source.category || existing.category || "festival";
+    existing.searchTerm = source.searchTerm || existing.searchTerm || "";
+    existing.searchTerms = source.searchTerms || existing.searchTerms || [];
     existing.lastValidatedAt = now;
     existing.status = "active";
     existing.evidence = [evidence, ...(existing.evidence || [])].slice(0, 5);
@@ -1256,6 +1346,8 @@ function mergeLearnedSource(learning, source, evidence) {
     url: source.url,
     area: source.area || "county",
     category: source.category || "festival",
+    searchTerm: source.searchTerm || "",
+    searchTerms: source.searchTerms || [],
     status: "active",
     sourceType: "user-suggested",
     discoveredAt: now,
@@ -1280,6 +1372,8 @@ function learnFromScan(results) {
           url: source.url,
           area: source.area || "county",
           category: source.category || "festival",
+          searchTerm: source.searchTerm || "",
+          searchTerms: source.searchTerms || [],
         },
         {
           title: source.evidenceTitle || "Discovered from learned activity search",
@@ -1420,32 +1514,45 @@ async function handleSuggest(request, response) {
         category,
         learned: true,
       };
-      const test = await fetchSource(source);
-      if (!test.ok) {
-        rejected.push({ suggestion: part, error: `Could not fetch source: ${test.error || "unknown error"}` });
-        continue;
-      }
+      const validation = await testSuggestedSource(source);
+      const test = validation.result;
+      const learnedSource = validation.source;
 
       if (!test.events.length) {
+        mergeLearnedSource(
+          learning,
+          learnedSource,
+          {
+            title: test.ok
+              ? "User suggested a source URL without clear event markup"
+              : `User suggested a source URL that could not be fetched automatically: ${test.error || "unknown error"}`,
+            source: "User suggestion",
+            url: learnedSource.url,
+            date: "",
+            seenAt: new Date().toISOString(),
+          }
+        );
         const candidate = mergeCandidate(learning, {
           name,
           area: normalizedArea,
           category,
-          score: 4,
-          url,
-          evidenceTitle: "User suggested a fetchable URL without clear event markup",
+          score: test.ok ? 5 : 4,
+          url: learnedSource.url,
+          evidenceTitle: test.ok
+            ? "User suggested a fetchable URL without clear event markup"
+            : "User suggested a URL retained for future scanning",
         });
-        accepted.push({ name: candidate.name, category: candidate.category, status: "candidate" });
+        accepted.push({ name: candidate.name, category: candidate.category, status: test.ok ? "learned-source" : "watchlist-source" });
         continue;
       }
 
       mergeLearnedSource(
         learning,
-        source,
+        learnedSource,
         {
           title: test.events[0].title || "Validated event listing",
           source: "User suggestion",
-          url,
+          url: learnedSource.url,
           date: test.events[0].startDate || "",
           seenAt: new Date().toISOString(),
         }
@@ -1455,7 +1562,7 @@ async function handleSuggest(request, response) {
         area: normalizedArea,
         category,
         score: 8 + Math.min(6, test.events.length),
-        url,
+        url: learnedSource.url,
         evidenceTitle: `${test.events.length} event record(s) found during validation`,
       });
       accepted.push({ name: candidate.name, category: candidate.category, status: "learned-source" });

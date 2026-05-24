@@ -291,7 +291,7 @@ function matchesDate(event) {
 function matchesQuery(event) {
   const query = normalizeSearchText(state.query);
   if (!query) return true;
-  const haystack = normalizeSearchText([event.title, event.summary, event.location, event.source, event.category, ...(event.tags || [])].join(" "));
+  const haystack = normalizeSearchText([event.title, event.summary, event.location, event.category, ...(event.tags || [])].join(" "));
   return haystack.includes(query) || haystack.replace(/\s+/g, "").includes(query.replace(/\s+/g, ""));
 }
 
