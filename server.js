@@ -100,15 +100,20 @@ function getActiveSources() {
       category: source.category || "festival",
       learned: true,
     }));
-  const candidateSearches = learning.candidates
+  const searchableCandidates = learning.candidates
     .filter((candidate) => candidate.status !== "ignored" && candidate.score >= 4 && isUsefulVenueName(candidate.name))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 8)
+    .sort((a, b) => b.score - a.score);
+  const priorityCandidates = searchableCandidates.filter(
+    (candidate) => isActivitySearchPrompt(candidate.name, candidate.category) || candidate.evidence?.some((item) => item.source === "User suggestion")
+  );
+  const candidateSearches = [...priorityCandidates, ...searchableCandidates]
+    .filter((candidate, index, list) => list.findIndex((item) => normalizeSearchText(item.name) === normalizeSearchText(candidate.name)) === index)
+    .slice(0, 16)
     .flatMap((candidate) => {
       const query = encodeURIComponent(candidate.name);
       const category = candidate.category || "festival";
       const searchTerms = encodeURIComponent(categorySearchTerms(category));
-      return [
+      const searches = [
         {
           name: `Learned Reddit search: ${candidate.name}`,
           url: `https://www.reddit.com/r/cork/search.json?q=${query}%20${searchTerms}&restrict_sr=1&sort=new&t=month`,
@@ -127,6 +132,27 @@ function getActiveSources() {
           learnedSearch: true,
         },
       ];
+      if (isActivitySearchPrompt(candidate.name, category)) {
+        searches.push(
+          {
+            name: `Learned Skiddle search: ${candidate.name}`,
+            url: `https://www.skiddle.com/whats-on/Cork/?keyword=${query}`,
+            area: candidate.area || "county",
+            category,
+            learned: true,
+            learnedSearch: true,
+          },
+          {
+            name: `Learned Meetup search: ${candidate.name}`,
+            url: `https://www.meetup.com/find/?keywords=${query}&location=ie--Cork&source=EVENTS`,
+            area: candidate.area || "county",
+            category,
+            learned: true,
+            learnedSearch: true,
+          }
+        );
+      }
+      return searches;
     });
   const seen = new Set();
   return [...seedSources, ...learnedSources, ...candidateSearches].filter((source) => {
@@ -279,6 +305,37 @@ function categorySearchTerms(category) {
     family: "family OR kids OR children",
   };
   return terms[category] || "event OR gig OR festival";
+}
+
+function isActivitySearchPrompt(value, category) {
+  const text = normalizeSearchText(value);
+  if (!text) return false;
+  const activityTerms = [
+    "soccer",
+    "football",
+    "cricket",
+    "rowing",
+    "volleyball",
+    "basketball",
+    "athletics",
+    "running",
+    "cycling",
+    "tennis",
+    "swimming",
+    "boxing",
+    "martial arts",
+    "hockey",
+    "badminton",
+    "sailing",
+    "triathlon",
+    "kabuki",
+    "sean nos",
+    "seanos",
+    "shanos",
+    "ceili",
+    "fleadh",
+  ];
+  return category !== "festival" && activityTerms.some((term) => containsTerm(text, normalizeSearchText(term)));
 }
 
 function inferCategory(text, fallback, sourceName = "") {
