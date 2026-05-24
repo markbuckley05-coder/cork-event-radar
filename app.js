@@ -195,7 +195,6 @@ const categoryFilters = document.querySelector("#categoryFilters");
 const sourceLinks = document.querySelector("#sourceLinks");
 const learningCandidates = document.querySelector("#learningCandidates");
 const suggestionInput = document.querySelector("#suggestionInput");
-const suggestionArea = document.querySelector("#suggestionArea");
 const suggestionButton = document.querySelector("#suggestionButton");
 const suggestionStatus = document.querySelector("#suggestionStatus");
 const refreshButton = document.querySelector("#refreshButton");
@@ -477,7 +476,7 @@ async function submitSuggestion() {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         suggestion,
-        area: suggestionArea.value,
+        area: "all",
       }),
     });
     const payload = await response.json();

@@ -732,6 +732,25 @@ function filterLearnedSearchEvents(events, source) {
   return events.filter((event) => learnedSearchTermMatches(event, source));
 }
 
+function isRelevantDiscoveredSource(text, source) {
+  const haystack = normalizeSearchText([text, source.url].join(" "));
+  const term = normalizeSearchText(source.searchTerm);
+  const corkSignal = /\b(cork|munster|west cork|cork city|county cork)\b/i.test(haystack);
+  const sourceSignal = /\b(fixtures?|results?|matches?|events?|club|league|calendar|whats on|what s on|tickets?)\b/i.test(haystack);
+  return containsTerm(haystack, term) && corkSignal && sourceSignal;
+}
+
+function sourceNameFromPage(url, pageText, fallback) {
+  const title = pageText.match(/\b([A-Z][A-Za-z0-9 '&.-]{2,80}(?:Club|Centre|Center|Fixtures|Results|League|Association|Ireland|Munster|Cork))\b/);
+  if (title) return cleanText(title[1]);
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname.replace(/^www\./, "").split(".")[0].replace(/[-_]+/g, " ");
+  } catch {
+    return cleanText(fallback);
+  }
+}
+
 function extractDiscoveryLinks(html, baseUrl) {
   const links = [];
   const seen = new Set();
@@ -798,17 +817,37 @@ async function fetchDiscoverySource(source) {
         };
         try {
           const html = await fetchHtml(url);
+          const pageText = cleanText(html).slice(0, 8000);
+          const relevantSource = isRelevantDiscoveredSource(pageText, discovered);
           const sportFixtures = extractSportFixtures(html, discovered);
           const structured = extractJsonLdEvents(html, discovered);
           const knownText = extractKnownTextEvents(html, discovered);
           const heuristic = structured.length ? [] : extractHeuristicEvents(html, discovered);
-          return filterLearnedSearchEvents([...sportFixtures, ...knownText, ...structured, ...heuristic], discovered);
+          const events = filterLearnedSearchEvents([...sportFixtures, ...knownText, ...structured, ...heuristic], discovered);
+          return {
+            events,
+            source: relevantSource || events.length
+              ? {
+                  name: sourceNameFromPage(url, pageText, source.searchTerm),
+                  url,
+                  area: inferArea(pageText, source.area),
+                  category: source.category,
+                  searchTerm: source.searchTerm,
+                  evidenceTitle: events[0]?.title || `${source.searchTerm} source discovered from search`,
+                }
+              : null,
+          };
         } catch {
-          return [];
+          return { events: [], source: null };
         }
       })
     );
-    return { source: source.name, ok: true, events: dedupe(results.flat()) };
+    return {
+      source: source.name,
+      ok: true,
+      events: dedupe(results.flatMap((result) => result.events)),
+      discoveredSources: results.map((result) => result.source).filter(Boolean),
+    };
   } catch (error) {
     return { source: source.name, ok: false, error: error.message, events: [] };
   }
@@ -1233,6 +1272,25 @@ function learnFromScan(results) {
   const now = new Date().toISOString();
 
   results.forEach((result) => {
+    (result.discoveredSources || []).forEach((source) => {
+      mergeLearnedSource(
+        learning,
+        {
+          name: source.name,
+          url: source.url,
+          area: source.area || "county",
+          category: source.category || "festival",
+        },
+        {
+          title: source.evidenceTitle || "Discovered from learned activity search",
+          source: result.source || "Activity discovery",
+          url: source.url,
+          date: "",
+          seenAt: now,
+        }
+      );
+    });
+
     (result.events || []).forEach((event) => {
       const names = extractVenueNames(event);
       names.forEach((name) => {

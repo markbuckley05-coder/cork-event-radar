@@ -120,21 +120,15 @@
         <section class="suggestion-panel" aria-label="Suggest a place or event source">
           <div>
             <p class="eyebrow">Teach the engine</p>
-            <h3>Suggest a place, event, or listings page</h3>
+            <h3>Suggest an activity, venue, event, or listings page</h3>
           </div>
           <div class="suggestion-fields">
             <textarea
               id="suggestionInput"
               rows="3"
-              placeholder="Example: Connolly's of Leap gigs, Ballydehob Jazz Festival, or https://example.com/events"
+              placeholder="Example: soccer, cricket, rowing, Connolly's of Leap gigs, or https://example.com/events"
             ></textarea>
             <div class="suggestion-actions">
-              <select id="suggestionArea" aria-label="Suggested area">
-                <option value="west-cork">West Cork</option>
-                <option value="city">Cork City</option>
-                <option value="county">County Cork</option>
-                <option value="all">All Cork</option>
-              </select>
               <button id="suggestionButton" class="enter-action" type="button">Suggest</button>
             </div>
             <p id="suggestionStatus" class="suggestion-status" role="status" aria-live="polite"></p>
