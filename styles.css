@@ -103,6 +103,10 @@ a {
   font-size: 0.98rem;
 }
 
+.filter-dock {
+  display: none;
+}
+
 .segmented,
 .check-list {
   display: grid;
@@ -580,6 +584,16 @@ main {
   .suggestion-panel,
   .filters {
     grid-template-columns: 1fr;
+  }
+
+  .filter-dock {
+    display: grid;
+  }
+
+  .filter-dock .filters {
+    border: 0;
+    background: transparent;
+    padding: 0;
   }
 
   .topbar,

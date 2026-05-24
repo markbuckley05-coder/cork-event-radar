@@ -188,6 +188,9 @@ const state = {
 
 const eventList = document.querySelector("#eventList");
 const eventTemplate = document.querySelector("#eventTemplate");
+const filtersPanel = document.querySelector(".filters");
+const mainContent = document.querySelector("main");
+const mobileFilterMount = document.querySelector("#mobileFilterMount");
 const categoryFilters = document.querySelector("#categoryFilters");
 const sourceLinks = document.querySelector("#sourceLinks");
 const learningCandidates = document.querySelector("#learningCandidates");
@@ -209,6 +212,7 @@ const totalEvents = document.querySelector("#totalEvents");
 const thisMonth = document.querySelector("#thisMonth");
 const westCorkCount = document.querySelector("#westCorkCount");
 const weekendCount = document.querySelector("#weekendCount");
+let filtersAreDocked = false;
 
 function escapeHtml(value) {
   return String(value || "").replace(/[&<>"']/g, (character) => {
@@ -283,8 +287,9 @@ function filteredEvents() {
 }
 
 function renderCategoryFilters() {
+  const baseEvents = state.events.filter(matchesArea).filter(matchesDate).filter(matchesQuery);
   const counts = categories.reduce((lookup, category) => {
-    lookup[category.id] = state.events.filter((event) => event.category === category.id || event.tags?.includes(category.id)).length;
+    lookup[category.id] = baseEvents.filter((event) => event.category === category.id || event.tags?.includes(category.id)).length;
     return lookup;
   }, {});
 
@@ -422,6 +427,19 @@ function setSuggestionStatus(message, type = "") {
   suggestionStatus.className = `suggestion-status ${type}`.trim();
 }
 
+function syncFilterPlacement() {
+  const shouldDock = window.matchMedia("(max-width: 980px)").matches;
+  if (shouldDock && !filtersAreDocked) {
+    mobileFilterMount.append(filtersPanel);
+    filtersAreDocked = true;
+  }
+
+  if (!shouldDock && filtersAreDocked) {
+    mainContent.insertBefore(filtersPanel, document.querySelector(".metrics"));
+    filtersAreDocked = false;
+  }
+}
+
 async function submitSuggestion() {
   const suggestion = suggestionInput.value.trim();
   if (!suggestion) {
@@ -547,4 +565,6 @@ searchInput.addEventListener("keydown", (event) => {
 });
 
 renderSourceLinks();
+syncFilterPlacement();
+window.addEventListener("resize", syncFilterPlacement);
 render();
