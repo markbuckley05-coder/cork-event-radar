@@ -89,7 +89,52 @@ function sourceIdentity(source) {
   return normalizeSearchText(source.url || source.name || "");
 }
 
-function getActiveSources() {
+function activityDiscoveryQueries(candidate) {
+  const name = cleanText(candidate.name);
+  const category = candidate.category || "festival";
+  const templates = {
+    sport: [
+      `${name} Cork fixtures results`,
+      `${name} Cork club fixtures`,
+      `${name} Munster fixtures results`,
+      `${name} Cork matches`,
+    ],
+    trad: [`${name} Cork events`, `${name} Cork sessions`, `${name} Cork festival`],
+    music: [`${name} Cork gigs`, `${name} Cork concerts`, `${name} Cork events`],
+    arts: [`${name} Cork theatre`, `${name} Cork performance`, `${name} Cork events`],
+    markets: [`${name} Cork market`, `${name} Cork events`],
+  };
+  return templates[category] || [`${name} Cork events`, `${name} Cork what's on`];
+}
+
+function activityDiscoverySourcesForCandidate(candidate) {
+  if (!isActivitySearchPrompt(candidate.name, candidate.category)) return [];
+  return activityDiscoveryQueries(candidate).slice(0, 4).map((query) => ({
+    name: `Activity discovery: ${query}`,
+    url: `https://duckduckgo.com/html/?q=${encodeURIComponent(query)}`,
+    area: candidate.area || "county",
+    category: candidate.category || "festival",
+    kind: "discovery",
+    learned: true,
+    learnedActivityDiscovery: true,
+    searchTerm: candidate.name,
+  }));
+}
+
+function activityCandidateFromQuery(query) {
+  const name = cleanText(query);
+  const category = inferCategory(name, "festival", "Search query");
+  if (!isActivitySearchPrompt(name, category)) return null;
+  return {
+    name,
+    area: "county",
+    category,
+    score: 99,
+    evidence: [{ source: "Search query" }],
+  };
+}
+
+function getActiveSources(searchQuery = "") {
   const learning = readLearningState();
   const learnedSources = learning.learnedSources
     .filter((source) => source.status !== "paused" && source.url)
@@ -106,10 +151,13 @@ function getActiveSources() {
   const priorityCandidates = searchableCandidates.filter(
     (candidate) => isActivitySearchPrompt(candidate.name, candidate.category) || candidate.evidence?.some((item) => item.source === "User suggestion")
   );
-  const candidateSearches = [...priorityCandidates, ...searchableCandidates]
+  const queryCandidate = activityCandidateFromQuery(searchQuery);
+  const activeCandidates = [queryCandidate, ...priorityCandidates, ...searchableCandidates]
+    .filter(Boolean)
     .filter((candidate, index, list) => list.findIndex((item) => normalizeSearchText(item.name) === normalizeSearchText(candidate.name)) === index)
-    .slice(0, 16)
-    .flatMap((candidate) => {
+    .slice(0, 16);
+  const activityDiscoverySources = activeCandidates.flatMap(activityDiscoverySourcesForCandidate);
+  const candidateSearches = activeCandidates.flatMap((candidate) => {
       const query = encodeURIComponent(candidate.name);
       const category = candidate.category || "festival";
       const searchTerms = encodeURIComponent(categorySearchTerms(category));
@@ -159,7 +207,7 @@ function getActiveSources() {
       return searches;
     });
   const seen = new Set();
-  return [...seedSources, ...learnedSources, ...candidateSearches].filter((source) => {
+  return [...seedSources, ...learnedSources, ...activityDiscoverySources, ...candidateSearches].filter((source) => {
     const key = sourceIdentity(source);
     if (!key || seen.has(key)) return false;
     seen.add(key);
@@ -591,6 +639,49 @@ function extractHeuristicEvents(html, source) {
   return events;
 }
 
+function isSportFixtureSource(source) {
+  return source.category === "sport" && Boolean(source.searchTerm);
+}
+
+function extractSportFixtures(html, source) {
+  if (!isSportFixtureSource(source)) return [];
+  const text = cleanText(html);
+  const events = [];
+  const fixturePattern =
+    /\b([A-Z][A-Za-z0-9 '&.-]{2,70}?)\s+(MCU\s+.{3,80}?)\s+Opponent\s+(.{3,80}?)\s+Venue\s+(.{3,90}?)\s+(\d{1,2}\/\d{1,2}\/\d{2,4})\s+(\d{1,2}[.:]\d{2}\s*(?:am|pm))/gi;
+  const corkSignal = /\b(cork|mardyke|farmers cross|farmer's cross|midleton|harlequins)\b/i;
+  const seen = new Set();
+  let match;
+
+  while ((match = fixturePattern.exec(text)) && events.length < 40) {
+    const [, team, competition, opponent, venue, date, time] = match.map(cleanText);
+    const fixtureText = `${team} ${competition} ${opponent} ${venue}`;
+    if (!corkSignal.test(fixtureText)) continue;
+
+    const normalizedDate = normalizeDate(date);
+    const title = `${team} v ${opponent}`;
+    const location = venue.replace(/\s+/g, " ").trim();
+    const key = normalizeSearchText(`${title} ${normalizedDate} ${location}`);
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    events.push({
+      title,
+      summary: `${competition}. ${cleanText(source.searchTerm)} fixture at ${location}, scheduled for ${time}. Open the source to confirm teams, venue, and match status.`,
+      startDate: normalizedDate,
+      location,
+      area: inferArea(location, source.area),
+      category: source.category,
+      tags: ["sport", source.searchTerm, inferArea(location, source.area), "fixtures"].filter(Boolean),
+      source: source.name,
+      url: source.url,
+      confidence: "Fixture source",
+    });
+  }
+
+  return events;
+}
+
 function extractKnownTextEvents(html, source) {
   const text = cleanText(html);
   const events = [];
@@ -641,19 +732,92 @@ function filterLearnedSearchEvents(events, source) {
   return events.filter((event) => learnedSearchTermMatches(event, source));
 }
 
-async function fetchRedditSource(source) {
+function extractDiscoveryLinks(html, baseUrl) {
+  const links = [];
+  const seen = new Set();
+  const linkRegex = /<a[^>]+href=["']([^"']+)["'][^>]*>/gi;
+  let match;
+
+  while ((match = linkRegex.exec(html)) && links.length < 8) {
+    let href = match[1].replace(/&amp;/g, "&");
+    try {
+      const parsed = new URL(href, baseUrl);
+      if (parsed.hostname.includes("duckduckgo.com") && parsed.pathname === "/l/") {
+        const target = parsed.searchParams.get("uddg");
+        if (target) href = target;
+      } else {
+        href = parsed.toString();
+      }
+      const target = new URL(href);
+      const host = target.hostname.replace(/^www\./, "");
+      if (/duckduckgo\.com|google\.com|bing\.com|facebook\.com|instagram\.com|youtube\.com|x\.com|twitter\.com/i.test(host)) continue;
+      if (!/^https?:$/i.test(target.protocol)) continue;
+      const url = target.toString();
+      if (seen.has(url)) continue;
+      seen.add(url);
+      links.push(url);
+    } catch {
+      // Ignore malformed result links.
+    }
+  }
+
+  return links;
+}
+
+async function fetchHtml(url, accept = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8") {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 9000);
   try {
-    const response = await fetch(source.url, {
+    const response = await fetch(url, {
       signal: controller.signal,
       headers: {
         "user-agent": "CorkEventRadar/1.0 (+local personal dashboard)",
-        accept: "application/json",
+        accept,
       },
     });
     if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-    const payload = await response.json();
+    return await response.text();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function fetchDiscoverySource(source) {
+  try {
+    const searchHtml = await fetchHtml(source.url);
+    const links = extractDiscoveryLinks(searchHtml, source.url).slice(0, 5);
+    const results = await Promise.all(
+      links.map(async (url) => {
+        const discovered = {
+          name: `${source.searchTerm} discovered source`,
+          url,
+          area: source.area,
+          category: source.category,
+          learnedSearch: true,
+          searchTerm: source.searchTerm,
+        };
+        try {
+          const html = await fetchHtml(url);
+          const sportFixtures = extractSportFixtures(html, discovered);
+          const structured = extractJsonLdEvents(html, discovered);
+          const knownText = extractKnownTextEvents(html, discovered);
+          const heuristic = structured.length ? [] : extractHeuristicEvents(html, discovered);
+          return filterLearnedSearchEvents([...sportFixtures, ...knownText, ...structured, ...heuristic], discovered);
+        } catch {
+          return [];
+        }
+      })
+    );
+    return { source: source.name, ok: true, events: dedupe(results.flat()) };
+  } catch (error) {
+    return { source: source.name, ok: false, error: error.message, events: [] };
+  }
+}
+
+async function fetchRedditSource(source) {
+  try {
+    const raw = await fetchHtml(source.url, "application/json");
+    const payload = JSON.parse(raw);
     const posts = payload?.data?.children || [];
     const events = posts
       .map((item) => item?.data)
@@ -681,34 +845,22 @@ async function fetchRedditSource(source) {
     return { source: source.name, ok: true, events: filterLearnedSearchEvents(events, source) };
   } catch (error) {
     return { source: source.name, ok: false, error: error.message, events: [] };
-  } finally {
-    clearTimeout(timeout);
   }
 }
 
 async function fetchSource(source) {
+  if (source.kind === "discovery") return fetchDiscoverySource(source);
   if (source.kind === "reddit") return fetchRedditSource(source);
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 9000);
   try {
-    const response = await fetch(source.url, {
-      signal: controller.signal,
-      headers: {
-        "user-agent": "CorkEventRadar/1.0 (+local personal dashboard)",
-        accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      },
-    });
-    if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-    const html = await response.text();
+    const html = await fetchHtml(source.url);
+    const sportFixtures = extractSportFixtures(html, source);
     const structured = extractJsonLdEvents(html, source);
     const knownText = extractKnownTextEvents(html, source);
     const heuristic = structured.length ? [] : extractHeuristicEvents(html, source);
-    return { source: source.name, ok: true, events: filterLearnedSearchEvents([...knownText, ...structured, ...heuristic], source) };
+    return { source: source.name, ok: true, events: filterLearnedSearchEvents([...sportFixtures, ...knownText, ...structured, ...heuristic], source) };
   } catch (error) {
     return { source: source.name, ok: false, error: error.message, events: [] };
-  } finally {
-    clearTimeout(timeout);
   }
 }
 
@@ -1134,7 +1286,7 @@ function learnFromScan(results) {
 
 async function handleApiEvents(request, response) {
   const url = new URL(request.url, `http://${request.headers.host}`);
-  const activeSources = getActiveSources();
+  const activeSources = getActiveSources(url.searchParams.get("q") || "");
   const results = await Promise.all(activeSources.map(fetchSource));
   const learning = learnFromScan(results);
   const events = dedupe([...results.flatMap((result) => result.events), ...generatedMarketEvents()])
