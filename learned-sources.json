@@ -1,0 +1,1875 @@
+{
+  "learnedSources": [
+    {
+      "name": "connollysofleap",
+      "url": "https://connollysofleap.com/",
+      "area": "county",
+      "category": "festival",
+      "status": "active",
+      "sourceType": "user-suggested",
+      "discoveredAt": "2026-05-24T09:23:24.113Z",
+      "lastValidatedAt": "2026-05-24T09:23:24.113Z",
+      "evidence": [
+        {
+          "title": "RÍOGHNACH CONNOLLY & HONEYFEET – SATURDAY 6TH JUNE 2026",
+          "source": "User suggestion",
+          "url": "https://connollysofleap.com/",
+          "date": "2026-06-20",
+          "seenAt": "2026-05-24T09:23:24.112Z"
+        }
+      ]
+    },
+    {
+      "name": "coughlans",
+      "url": "https://www.coughlans.ie/",
+      "area": "county",
+      "category": "festival",
+      "status": "active",
+      "sourceType": "user-suggested",
+      "discoveredAt": "2026-05-24T09:21:22.687Z",
+      "lastValidatedAt": "2026-05-24T09:21:22.687Z",
+      "evidence": [
+        {
+          "title": "Sun 24 May",
+          "source": "User suggestion",
+          "url": "https://www.coughlans.ie/",
+          "date": "2026-05-24",
+          "seenAt": "2026-05-24T09:21:22.687Z"
+        }
+      ]
+    },
+    {
+      "name": "Crane Lane Theatre",
+      "url": "https://corkheritagepubs.com/whats-on/",
+      "area": "city",
+      "category": "music",
+      "status": "active",
+      "sourceType": "user-suggested",
+      "discoveredAt": "2026-05-24T09:01:25.406Z",
+      "lastValidatedAt": "2026-05-24T09:08:24.907Z",
+      "evidence": [
+        {
+          "title": "User suggested Crane lane cork",
+          "source": "User suggestion",
+          "url": "https://corkheritagepubs.com/whats-on/",
+          "date": "",
+          "seenAt": "2026-05-24T09:08:24.907Z"
+        },
+        {
+          "title": "User suggested Crane lane cork",
+          "source": "User suggestion",
+          "url": "https://corkheritagepubs.com/whats-on/",
+          "date": "",
+          "seenAt": "2026-05-24T09:07:34.887Z"
+        },
+        {
+          "title": "User suggested Crane lane cork",
+          "source": "User suggestion",
+          "url": "https://corkheritagepubs.com/whats-on/",
+          "date": "",
+          "seenAt": "2026-05-24T09:01:25.406Z"
+        }
+      ]
+    },
+    {
+      "name": "Fred Zeppelins",
+      "url": "https://fredzeppelins.com/",
+      "area": "city",
+      "category": "music",
+      "status": "active",
+      "sourceType": "user-suggested",
+      "discoveredAt": "2026-05-24T09:01:25.404Z",
+      "lastValidatedAt": "2026-05-24T09:08:24.906Z",
+      "evidence": [
+        {
+          "title": "User suggested cork frezeppelins",
+          "source": "User suggestion",
+          "url": "https://fredzeppelins.com/",
+          "date": "",
+          "seenAt": "2026-05-24T09:08:24.906Z"
+        },
+        {
+          "title": "User suggested cork fred zeppelins",
+          "source": "User suggestion",
+          "url": "https://fredzeppelins.com/",
+          "date": "",
+          "seenAt": "2026-05-24T09:07:34.887Z"
+        },
+        {
+          "title": "User suggested cork fred zeppelins",
+          "source": "User suggestion",
+          "url": "https://fredzeppelins.com/",
+          "date": "",
+          "seenAt": "2026-05-24T09:01:25.404Z"
+        }
+      ]
+    },
+    {
+      "name": "Sin É",
+      "url": "https://corkheritagepubs.com/sin-e/",
+      "area": "city",
+      "category": "trad",
+      "status": "active",
+      "sourceType": "user-suggested",
+      "discoveredAt": "2026-05-24T09:01:25.404Z",
+      "lastValidatedAt": "2026-05-24T09:08:24.905Z",
+      "evidence": [
+        {
+          "title": "User suggested sin e",
+          "source": "User suggestion",
+          "url": "https://corkheritagepubs.com/sin-e/",
+          "date": "",
+          "seenAt": "2026-05-24T09:08:24.905Z"
+        },
+        {
+          "title": "User suggested sin e",
+          "source": "User suggestion",
+          "url": "https://corkheritagepubs.com/sin-e/",
+          "date": "",
+          "seenAt": "2026-05-24T09:07:34.887Z"
+        },
+        {
+          "title": "User suggested sin e",
+          "source": "User suggestion",
+          "url": "https://corkheritagepubs.com/sin-e/",
+          "date": "",
+          "seenAt": "2026-05-24T09:01:25.402Z"
+        }
+      ]
+    },
+    {
+      "name": "debarra",
+      "url": "https://debarra.ie/events/",
+      "area": "west-cork",
+      "category": "festival",
+      "status": "active",
+      "sourceType": "user-suggested",
+      "discoveredAt": "2026-05-24T08:52:39.737Z",
+      "lastValidatedAt": "2026-05-24T08:52:39.737Z",
+      "evidence": [
+        {
+          "title": "Christopher Luke",
+          "source": "User suggestion",
+          "url": "https://debarra.ie/events/",
+          "date": "2026-05-27",
+          "seenAt": "2026-05-24T08:52:39.737Z"
+        }
+      ]
+    }
+  ],
+  "candidates": [
+    {
+      "name": "connollysofleap",
+      "area": "county",
+      "category": "festival",
+      "score": 14,
+      "evidenceCount": 1,
+      "evidence": [
+        {
+          "title": "10 event record(s) found during validation",
+          "source": "User suggestion",
+          "url": "https://connollysofleap.com/",
+          "date": "",
+          "seenAt": "2026-05-24T09:23:24.113Z"
+        }
+      ],
+      "suggestedQueries": [
+        "connollysofleap events Cork",
+        "connollysofleap what's on",
+        "connollysofleap gigs",
+        "connollysofleap tickets"
+      ],
+      "discoveredAt": "2026-05-24T09:23:24.113Z",
+      "lastSeenAt": "2026-05-24T09:23:24.113Z",
+      "status": "candidate"
+    },
+    {
+      "name": "Live At The Marquee Cork",
+      "area": "county",
+      "category": "music",
+      "score": 99,
+      "evidenceCount": 52,
+      "evidence": [
+        {
+          "title": "The Marquee Masters: World Darts Superstars",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/Live-At-The-Marquee---Cork/The-Marquee-Masters-World-Darts-Superstars/42250423/",
+          "date": "2026-07-11",
+          "seenAt": "2026-05-24T09:21:29.020Z"
+        },
+        {
+          "title": "Two Door Cinema Club",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/Live-At-The-Marquee---Cork/Two-Door-Cinema-Club/42246516/",
+          "date": "2026-06-23",
+          "seenAt": "2026-05-24T09:21:29.020Z"
+        },
+        {
+          "title": "K-Pop Forever! Tribute",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/Live-At-The-Marquee---Cork/K-Pop-Forever-Tribute/42246119/",
+          "date": "2026-06-11",
+          "seenAt": "2026-05-24T09:21:29.020Z"
+        },
+        {
+          "title": "Dec Pierce Block Rockin' Beats",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/Live-At-The-Marquee---Cork/Dec-Pierce-Block-Rockin-Beats/42246019/",
+          "date": "2026-07-04",
+          "seenAt": "2026-05-24T09:21:29.020Z"
+        },
+        {
+          "title": "The Marquee Masters: World Darts Superstars",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/Live-At-The-Marquee---Cork/The-Marquee-Masters-World-Darts-Superstars/42250423/",
+          "date": "2026-07-11",
+          "seenAt": "2026-05-24T09:19:56.244Z"
+        }
+      ],
+      "suggestedQueries": [
+        "Live At The Marquee Cork events Cork",
+        "Live At The Marquee Cork what's on",
+        "Live At The Marquee Cork gigs",
+        "Live At The Marquee Cork tickets"
+      ],
+      "discoveredAt": "2026-05-24T08:39:11.762Z",
+      "status": "candidate",
+      "lastSeenAt": "2026-05-24T09:21:29.020Z"
+    },
+    {
+      "name": "The Pavillion, Cork",
+      "area": "county",
+      "category": "music",
+      "score": 99,
+      "evidenceCount": 26,
+      "evidence": [
+        {
+          "title": "House Keeping presents: Jordan Nocturne",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/The-Pavillion%2C-Cork/House-Keeping-presents-Jordan-Nocturne/42432687/",
+          "date": "2026-05-29",
+          "seenAt": "2026-05-24T09:21:29.020Z"
+        },
+        {
+          "title": "The Vintage Explosion",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/The-Pavillion%2C-Cork/The-Vintage-Explosion/42412464/",
+          "date": "2027-03-18",
+          "seenAt": "2026-05-24T09:21:29.020Z"
+        },
+        {
+          "title": "House Keeping presents: Jordan Nocturne",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/The-Pavillion%2C-Cork/House-Keeping-presents-Jordan-Nocturne/42432687/",
+          "date": "2026-05-29",
+          "seenAt": "2026-05-24T09:19:56.244Z"
+        },
+        {
+          "title": "The Vintage Explosion",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/The-Pavillion%2C-Cork/The-Vintage-Explosion/42412464/",
+          "date": "2027-03-18",
+          "seenAt": "2026-05-24T09:19:56.244Z"
+        },
+        {
+          "title": "House Keeping presents: Jordan Nocturne",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/The-Pavillion%2C-Cork/House-Keeping-presents-Jordan-Nocturne/42432687/",
+          "date": "2026-05-29",
+          "seenAt": "2026-05-24T09:19:31.530Z"
+        }
+      ],
+      "suggestedQueries": [
+        "The Pavillion, Cork events Cork",
+        "The Pavillion, Cork what's on",
+        "The Pavillion, Cork gigs",
+        "The Pavillion, Cork tickets"
+      ],
+      "discoveredAt": "2026-05-24T08:39:11.762Z",
+      "status": "candidate",
+      "lastSeenAt": "2026-05-24T09:21:29.020Z"
+    },
+    {
+      "name": "Crane Lane",
+      "area": "city",
+      "category": "trad",
+      "score": 96,
+      "evidenceCount": 32,
+      "evidence": [
+        {
+          "title": "The Lee Sessions Trad Trail Sin É Thu 28 May, 9pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11196293&rand=91002",
+          "date": "2026-05-28",
+          "seenAt": "2026-05-24T09:21:29.020Z"
+        },
+        {
+          "title": "The Lee Sessions Trad Trail Sin É Mon 25 May, 9pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11196350&rand=41368",
+          "date": "2026-05-25",
+          "seenAt": "2026-05-24T09:21:29.020Z"
+        },
+        {
+          "title": "Jazz Improv! (All Players Welcome) Crane Lane Theatre Mon 25 May, 9pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11195524&rand=79774",
+          "date": "2026-05-25",
+          "seenAt": "2026-05-24T09:21:29.020Z"
+        },
+        {
+          "title": "The Lee Sessions Trad Trail Sin É Mon 25 May, 6:30pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11196342&rand=68083",
+          "date": "2026-05-25",
+          "seenAt": "2026-05-24T09:21:29.020Z"
+        },
+        {
+          "title": "The Lee Sessions Trad Trail Sin É Thu 28 May, 9pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11196293&rand=98051",
+          "date": "2026-05-28",
+          "seenAt": "2026-05-24T09:19:56.244Z"
+        }
+      ],
+      "suggestedQueries": [
+        "Crane Lane events Cork",
+        "Crane Lane what's on",
+        "Crane Lane gigs",
+        "Crane Lane tickets"
+      ],
+      "discoveredAt": "2026-05-24T09:10:41.129Z",
+      "status": "candidate",
+      "lastSeenAt": "2026-05-24T09:21:29.020Z"
+    },
+    {
+      "name": "Sherkin Island",
+      "area": "west-cork",
+      "category": "music",
+      "score": 65,
+      "evidenceCount": 13,
+      "evidence": [
+        {
+          "title": "Open Ear 2026",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/Sherkin-Island/Open-Ear-2026/42432682/",
+          "date": "2026-05-28",
+          "seenAt": "2026-05-24T09:21:29.020Z"
+        },
+        {
+          "title": "Open Ear 2026",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/Sherkin-Island/Open-Ear-2026/42432682/",
+          "date": "2026-05-28",
+          "seenAt": "2026-05-24T09:19:56.244Z"
+        },
+        {
+          "title": "Open Ear 2026",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/Sherkin-Island/Open-Ear-2026/42432682/",
+          "date": "2026-05-28",
+          "seenAt": "2026-05-24T09:19:31.530Z"
+        },
+        {
+          "title": "Open Ear 2026",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/Sherkin-Island/Open-Ear-2026/42432682/",
+          "date": "2026-05-28",
+          "seenAt": "2026-05-24T09:19:25.512Z"
+        },
+        {
+          "title": "Open Ear 2026",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/Sherkin-Island/Open-Ear-2026/42432682/",
+          "date": "2026-05-28",
+          "seenAt": "2026-05-24T09:18:25.562Z"
+        }
+      ],
+      "suggestedQueries": [
+        "Sherkin Island events Cork",
+        "Sherkin Island what's on",
+        "Sherkin Island gigs",
+        "Sherkin Island tickets"
+      ],
+      "discoveredAt": "2026-05-24T08:39:11.762Z",
+      "status": "candidate",
+      "lastSeenAt": "2026-05-24T09:21:29.020Z"
+    },
+    {
+      "name": "Kino",
+      "area": "county",
+      "category": "music",
+      "score": 52,
+      "evidenceCount": 13,
+      "evidence": [
+        {
+          "title": "The Devout - Depeche Mode Tribute - Cork, Ireland",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/Kino/The-Devout---Depeche-Mode-Tribute---Cork-Ireland/41583303/",
+          "date": "2026-06-11",
+          "seenAt": "2026-05-24T09:21:29.020Z"
+        },
+        {
+          "title": "The Devout - Depeche Mode Tribute - Cork, Ireland",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/Kino/The-Devout---Depeche-Mode-Tribute---Cork-Ireland/41583303/",
+          "date": "2026-06-11",
+          "seenAt": "2026-05-24T09:19:56.244Z"
+        },
+        {
+          "title": "The Devout - Depeche Mode Tribute - Cork, Ireland",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/Kino/The-Devout---Depeche-Mode-Tribute---Cork-Ireland/41583303/",
+          "date": "2026-06-11",
+          "seenAt": "2026-05-24T09:19:31.530Z"
+        },
+        {
+          "title": "The Devout - Depeche Mode Tribute - Cork, Ireland",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/Kino/The-Devout---Depeche-Mode-Tribute---Cork-Ireland/41583303/",
+          "date": "2026-06-11",
+          "seenAt": "2026-05-24T09:19:25.512Z"
+        },
+        {
+          "title": "The Devout - Depeche Mode Tribute - Cork, Ireland",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/Kino/The-Devout---Depeche-Mode-Tribute---Cork-Ireland/41583303/",
+          "date": "2026-06-11",
+          "seenAt": "2026-05-24T09:18:25.562Z"
+        }
+      ],
+      "suggestedQueries": [
+        "Kino events Cork",
+        "Kino what's on",
+        "Kino gigs",
+        "Kino tickets"
+      ],
+      "discoveredAt": "2026-05-24T08:39:11.762Z",
+      "status": "candidate",
+      "lastSeenAt": "2026-05-24T09:21:29.020Z"
+    },
+    {
+      "name": "SuperValu Pairc Ui Chaoimh",
+      "area": "county",
+      "category": "music",
+      "score": 52,
+      "evidenceCount": 13,
+      "evidence": [
+        {
+          "title": "Zach Bryan at SuperValu Pairc Ui Chaoimh",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/SuperValu-Pairc-Ui-Chaoimh/Zach-Bryan-at-SuperValu-Pairc-Ui-Chaoimh/42080844/",
+          "date": "2026-06-20",
+          "seenAt": "2026-05-24T09:21:29.020Z"
+        },
+        {
+          "title": "Zach Bryan at SuperValu Pairc Ui Chaoimh",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/SuperValu-Pairc-Ui-Chaoimh/Zach-Bryan-at-SuperValu-Pairc-Ui-Chaoimh/42080844/",
+          "date": "2026-06-20",
+          "seenAt": "2026-05-24T09:19:56.244Z"
+        },
+        {
+          "title": "Zach Bryan at SuperValu Pairc Ui Chaoimh",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/SuperValu-Pairc-Ui-Chaoimh/Zach-Bryan-at-SuperValu-Pairc-Ui-Chaoimh/42080844/",
+          "date": "2026-06-20",
+          "seenAt": "2026-05-24T09:19:31.530Z"
+        },
+        {
+          "title": "Zach Bryan at SuperValu Pairc Ui Chaoimh",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/SuperValu-Pairc-Ui-Chaoimh/Zach-Bryan-at-SuperValu-Pairc-Ui-Chaoimh/42080844/",
+          "date": "2026-06-20",
+          "seenAt": "2026-05-24T09:19:25.512Z"
+        },
+        {
+          "title": "Zach Bryan at SuperValu Pairc Ui Chaoimh",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/SuperValu-Pairc-Ui-Chaoimh/Zach-Bryan-at-SuperValu-Pairc-Ui-Chaoimh/42080844/",
+          "date": "2026-06-20",
+          "seenAt": "2026-05-24T09:18:25.562Z"
+        }
+      ],
+      "suggestedQueries": [
+        "SuperValu Pairc Ui Chaoimh events Cork",
+        "SuperValu Pairc Ui Chaoimh what's on",
+        "SuperValu Pairc Ui Chaoimh gigs",
+        "SuperValu Pairc Ui Chaoimh tickets"
+      ],
+      "discoveredAt": "2026-05-24T08:39:11.762Z",
+      "status": "candidate",
+      "lastSeenAt": "2026-05-24T09:21:29.020Z"
+    },
+    {
+      "name": "Teach Na Féile Community Centre,",
+      "area": "county",
+      "category": "arts",
+      "score": 52,
+      "evidenceCount": 13,
+      "evidence": [
+        {
+          "title": "Documentary film: The phenomenon Bruno Groening",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/Teach-Na-F%C3%A9ile-Community-Centre%2C/Documentary-film-The-phenomenon-Bruno-Groening/42250657/",
+          "date": "2026-05-24",
+          "seenAt": "2026-05-24T09:21:29.020Z"
+        },
+        {
+          "title": "Documentary film: The phenomenon Bruno Groening",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/Teach-Na-F%C3%A9ile-Community-Centre%2C/Documentary-film-The-phenomenon-Bruno-Groening/42250657/",
+          "date": "2026-05-24",
+          "seenAt": "2026-05-24T09:19:56.244Z"
+        },
+        {
+          "title": "Documentary film: The phenomenon Bruno Groening",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/Teach-Na-F%C3%A9ile-Community-Centre%2C/Documentary-film-The-phenomenon-Bruno-Groening/42250657/",
+          "date": "2026-05-24",
+          "seenAt": "2026-05-24T09:19:31.530Z"
+        },
+        {
+          "title": "Documentary film: The phenomenon Bruno Groening",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/Teach-Na-F%C3%A9ile-Community-Centre%2C/Documentary-film-The-phenomenon-Bruno-Groening/42250657/",
+          "date": "2026-05-24",
+          "seenAt": "2026-05-24T09:19:25.512Z"
+        },
+        {
+          "title": "Documentary film: The phenomenon Bruno Groening",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/Teach-Na-F%C3%A9ile-Community-Centre%2C/Documentary-film-The-phenomenon-Bruno-Groening/42250657/",
+          "date": "2026-05-24",
+          "seenAt": "2026-05-24T09:18:25.562Z"
+        }
+      ],
+      "suggestedQueries": [
+        "Teach Na Féile Community Centre, events Cork",
+        "Teach Na Féile Community Centre, what's on",
+        "Teach Na Féile Community Centre, gigs",
+        "Teach Na Féile Community Centre, tickets"
+      ],
+      "discoveredAt": "2026-05-24T08:39:11.762Z",
+      "status": "candidate",
+      "lastSeenAt": "2026-05-24T09:21:29.020Z"
+    },
+    {
+      "name": "Rising Sons Brewery",
+      "area": "county",
+      "category": "festival",
+      "score": 52,
+      "evidenceCount": 13,
+      "evidence": [
+        {
+          "title": "Business, Startups Meetup @pub",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/cork-startups-founders-entrepreneurs-meetup/events/314753558/",
+          "date": "2026-05-25",
+          "seenAt": "2026-05-24T09:21:29.020Z"
+        },
+        {
+          "title": "Business, Startups Meetup @pub",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/cork-startups-founders-entrepreneurs-meetup/events/314753558/",
+          "date": "2026-05-25",
+          "seenAt": "2026-05-24T09:19:56.244Z"
+        },
+        {
+          "title": "Business, Startups Meetup @pub",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/cork-startups-founders-entrepreneurs-meetup/events/314753558/",
+          "date": "2026-05-25",
+          "seenAt": "2026-05-24T09:19:31.530Z"
+        },
+        {
+          "title": "Business, Startups Meetup @pub",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/cork-startups-founders-entrepreneurs-meetup/events/314753558/",
+          "date": "2026-05-25",
+          "seenAt": "2026-05-24T09:19:25.512Z"
+        },
+        {
+          "title": "Business, Startups Meetup @pub",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/cork-startups-founders-entrepreneurs-meetup/events/314753558/",
+          "date": "2026-05-25",
+          "seenAt": "2026-05-24T09:18:25.562Z"
+        }
+      ],
+      "suggestedQueries": [
+        "Rising Sons Brewery events Cork",
+        "Rising Sons Brewery what's on",
+        "Rising Sons Brewery gigs",
+        "Rising Sons Brewery tickets"
+      ],
+      "discoveredAt": "2026-05-24T08:39:11.762Z",
+      "status": "candidate",
+      "lastSeenAt": "2026-05-24T09:21:29.020Z"
+    },
+    {
+      "name": "The Pavilion",
+      "area": "county",
+      "category": "festival",
+      "score": 52,
+      "evidenceCount": 13,
+      "evidence": [
+        {
+          "title": "Cork|Sec 156",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/corksec/events/311100614/",
+          "date": "2026-06-09",
+          "seenAt": "2026-05-24T09:21:29.020Z"
+        },
+        {
+          "title": "Cork|Sec 156",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/corksec/events/311100614/",
+          "date": "2026-06-09",
+          "seenAt": "2026-05-24T09:19:56.244Z"
+        },
+        {
+          "title": "Cork|Sec 156",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/corksec/events/311100614/",
+          "date": "2026-06-09",
+          "seenAt": "2026-05-24T09:19:31.530Z"
+        },
+        {
+          "title": "Cork|Sec 156",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/corksec/events/311100614/",
+          "date": "2026-06-09",
+          "seenAt": "2026-05-24T09:19:25.512Z"
+        },
+        {
+          "title": "Cork|Sec 156",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/corksec/events/311100614/",
+          "date": "2026-06-09",
+          "seenAt": "2026-05-24T09:18:25.562Z"
+        }
+      ],
+      "suggestedQueries": [
+        "The Pavilion events Cork",
+        "The Pavilion what's on",
+        "The Pavilion gigs",
+        "The Pavilion tickets"
+      ],
+      "discoveredAt": "2026-05-24T08:39:11.762Z",
+      "status": "candidate",
+      "lastSeenAt": "2026-05-24T09:21:29.020Z"
+    },
+    {
+      "name": "Bell's Field",
+      "area": "city",
+      "category": "food",
+      "score": 52,
+      "evidenceCount": 13,
+      "evidence": [
+        {
+          "title": "🌞 Summer Picnic – Offline Circle",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/offline-circle/events/314707583/",
+          "date": "2026-06-21",
+          "seenAt": "2026-05-24T09:21:29.020Z"
+        },
+        {
+          "title": "🌞 Summer Picnic – Offline Circle",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/offline-circle/events/314707583/",
+          "date": "2026-06-21",
+          "seenAt": "2026-05-24T09:19:56.244Z"
+        },
+        {
+          "title": "🌞 Summer Picnic – Offline Circle",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/offline-circle/events/314707583/",
+          "date": "2026-06-21",
+          "seenAt": "2026-05-24T09:19:31.530Z"
+        },
+        {
+          "title": "🌞 Summer Picnic – Offline Circle",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/offline-circle/events/314707583/",
+          "date": "2026-06-21",
+          "seenAt": "2026-05-24T09:19:25.512Z"
+        },
+        {
+          "title": "🌞 Summer Picnic – Offline Circle",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/offline-circle/events/314707583/",
+          "date": "2026-06-21",
+          "seenAt": "2026-05-24T09:18:25.562Z"
+        }
+      ],
+      "suggestedQueries": [
+        "Bell's Field events Cork",
+        "Bell's Field what's on",
+        "Bell's Field gigs",
+        "Bell's Field tickets"
+      ],
+      "discoveredAt": "2026-05-24T08:39:11.762Z",
+      "status": "candidate",
+      "lastSeenAt": "2026-05-24T09:21:29.020Z"
+    },
+    {
+      "name": "44 Cornmarket St",
+      "area": "county",
+      "category": "trad",
+      "score": 52,
+      "evidenceCount": 13,
+      "evidence": [
+        {
+          "title": "Come along, play games, have fun, make friends!",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/iga-cork/events/314646088/",
+          "date": "2026-05-25",
+          "seenAt": "2026-05-24T09:21:29.020Z"
+        },
+        {
+          "title": "Come along, play games, have fun, make friends!",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/iga-cork/events/314646088/",
+          "date": "2026-05-25",
+          "seenAt": "2026-05-24T09:19:56.244Z"
+        },
+        {
+          "title": "Come along, play games, have fun, make friends!",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/iga-cork/events/314646088/",
+          "date": "2026-05-25",
+          "seenAt": "2026-05-24T09:19:31.530Z"
+        },
+        {
+          "title": "Come along, play games, have fun, make friends!",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/iga-cork/events/314646088/",
+          "date": "2026-05-25",
+          "seenAt": "2026-05-24T09:19:25.512Z"
+        },
+        {
+          "title": "Come along, play games, have fun, make friends!",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/iga-cork/events/314646088/",
+          "date": "2026-05-25",
+          "seenAt": "2026-05-24T09:18:25.562Z"
+        }
+      ],
+      "suggestedQueries": [
+        "44 Cornmarket St events Cork",
+        "44 Cornmarket St what's on",
+        "44 Cornmarket St gigs",
+        "44 Cornmarket St tickets"
+      ],
+      "discoveredAt": "2026-05-24T08:39:11.762Z",
+      "status": "candidate",
+      "lastSeenAt": "2026-05-24T09:21:29.020Z"
+    },
+    {
+      "name": "The Haven Cafe",
+      "area": "county",
+      "category": "festival",
+      "score": 52,
+      "evidenceCount": 13,
+      "evidence": [
+        {
+          "title": "Rebel City Drama Club - Monday meet-up",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/rebel-city-drama-club/events/314541546/",
+          "date": "2026-05-25",
+          "seenAt": "2026-05-24T09:21:29.020Z"
+        },
+        {
+          "title": "Rebel City Drama Club - Monday meet-up",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/rebel-city-drama-club/events/314541546/",
+          "date": "2026-05-25",
+          "seenAt": "2026-05-24T09:19:56.244Z"
+        },
+        {
+          "title": "Rebel City Drama Club - Monday meet-up",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/rebel-city-drama-club/events/314541546/",
+          "date": "2026-05-25",
+          "seenAt": "2026-05-24T09:19:31.530Z"
+        },
+        {
+          "title": "Rebel City Drama Club - Monday meet-up",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/rebel-city-drama-club/events/314541546/",
+          "date": "2026-05-25",
+          "seenAt": "2026-05-24T09:19:25.512Z"
+        },
+        {
+          "title": "Rebel City Drama Club - Monday meet-up",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/rebel-city-drama-club/events/314541546/",
+          "date": "2026-05-25",
+          "seenAt": "2026-05-24T09:18:25.562Z"
+        }
+      ],
+      "suggestedQueries": [
+        "The Haven Cafe events Cork",
+        "The Haven Cafe what's on",
+        "The Haven Cafe gigs",
+        "The Haven Cafe tickets"
+      ],
+      "discoveredAt": "2026-05-24T08:39:11.762Z",
+      "status": "candidate",
+      "lastSeenAt": "2026-05-24T09:21:29.020Z"
+    },
+    {
+      "name": "Rebel City Drama",
+      "area": "county",
+      "category": "festival",
+      "score": 52,
+      "evidenceCount": 13,
+      "evidence": [
+        {
+          "title": "Rebel City Drama Club - Monday meet-up",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/rebel-city-drama-club/events/314541546/",
+          "date": "2026-05-25",
+          "seenAt": "2026-05-24T09:21:29.020Z"
+        },
+        {
+          "title": "Rebel City Drama Club - Monday meet-up",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/rebel-city-drama-club/events/314541546/",
+          "date": "2026-05-25",
+          "seenAt": "2026-05-24T09:19:56.244Z"
+        },
+        {
+          "title": "Rebel City Drama Club - Monday meet-up",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/rebel-city-drama-club/events/314541546/",
+          "date": "2026-05-25",
+          "seenAt": "2026-05-24T09:19:31.530Z"
+        },
+        {
+          "title": "Rebel City Drama Club - Monday meet-up",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/rebel-city-drama-club/events/314541546/",
+          "date": "2026-05-25",
+          "seenAt": "2026-05-24T09:19:25.512Z"
+        },
+        {
+          "title": "Rebel City Drama Club - Monday meet-up",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/rebel-city-drama-club/events/314541546/",
+          "date": "2026-05-25",
+          "seenAt": "2026-05-24T09:18:25.562Z"
+        }
+      ],
+      "suggestedQueries": [
+        "Rebel City Drama events Cork",
+        "Rebel City Drama what's on",
+        "Rebel City Drama gigs",
+        "Rebel City Drama tickets"
+      ],
+      "discoveredAt": "2026-05-24T08:39:11.762Z",
+      "status": "candidate",
+      "lastSeenAt": "2026-05-24T09:21:29.020Z"
+    },
+    {
+      "name": "Crystal",
+      "area": "city",
+      "category": "trad",
+      "score": 48,
+      "evidenceCount": 16,
+      "evidence": [
+        {
+          "title": "The Lee Sessions Trad Trail Sin É Thu 28 May, 9pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11196293&rand=91002",
+          "date": "2026-05-28",
+          "seenAt": "2026-05-24T09:21:29.020Z"
+        },
+        {
+          "title": "The Lee Sessions Trad Trail Sin É Mon 25 May, 6:30pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11196342&rand=68083",
+          "date": "2026-05-25",
+          "seenAt": "2026-05-24T09:21:29.020Z"
+        },
+        {
+          "title": "The Lee Sessions Trad Trail Sin É Thu 28 May, 9pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11196293&rand=98051",
+          "date": "2026-05-28",
+          "seenAt": "2026-05-24T09:19:56.244Z"
+        },
+        {
+          "title": "The Lee Sessions Trad Trail Sin É Mon 25 May, 6:30pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11196342&rand=97407",
+          "date": "2026-05-25",
+          "seenAt": "2026-05-24T09:19:56.244Z"
+        },
+        {
+          "title": "The Lee Sessions Trad Trail Sin É Thu 28 May, 9pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11196293&rand=4343",
+          "date": "2026-05-28",
+          "seenAt": "2026-05-24T09:19:31.530Z"
+        }
+      ],
+      "suggestedQueries": [
+        "Crystal events Cork",
+        "Crystal what's on",
+        "Crystal gigs",
+        "Crystal tickets"
+      ],
+      "discoveredAt": "2026-05-24T09:10:41.129Z",
+      "status": "candidate",
+      "lastSeenAt": "2026-05-24T09:21:29.020Z"
+    },
+    {
+      "name": "DJ Val Crane Lane",
+      "area": "city",
+      "category": "trad",
+      "score": 48,
+      "evidenceCount": 16,
+      "evidence": [
+        {
+          "title": "The Lee Sessions Trad Trail Sin É Tue 26 May, 6:30pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11196358&rand=26922",
+          "date": "2026-05-26",
+          "seenAt": "2026-05-24T09:21:29.020Z"
+        },
+        {
+          "title": "DJ Val Crane Lane Theatre Mon 25 May, 11pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11196902&rand=32345",
+          "date": "2026-05-25",
+          "seenAt": "2026-05-24T09:21:29.020Z"
+        },
+        {
+          "title": "The Lee Sessions Trad Trail Sin É Tue 26 May, 6:30pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11196358&rand=13646",
+          "date": "2026-05-26",
+          "seenAt": "2026-05-24T09:19:56.244Z"
+        },
+        {
+          "title": "DJ Val Crane Lane Theatre Mon 25 May, 11pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11196902&rand=23648",
+          "date": "2026-05-25",
+          "seenAt": "2026-05-24T09:19:56.244Z"
+        },
+        {
+          "title": "The Lee Sessions Trad Trail Sin É Tue 26 May, 6:30pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11196358&rand=28830",
+          "date": "2026-05-26",
+          "seenAt": "2026-05-24T09:19:31.530Z"
+        }
+      ],
+      "suggestedQueries": [
+        "DJ Val Crane Lane events Cork",
+        "DJ Val Crane Lane what's on",
+        "DJ Val Crane Lane gigs",
+        "DJ Val Crane Lane tickets"
+      ],
+      "discoveredAt": "2026-05-24T09:10:41.129Z",
+      "status": "candidate",
+      "lastSeenAt": "2026-05-24T09:21:29.020Z"
+    },
+    {
+      "name": "The Wilton",
+      "area": "city",
+      "category": "trad",
+      "score": 39,
+      "evidenceCount": 13,
+      "evidence": [
+        {
+          "title": "The Lee Sessions Trad Trail",
+          "source": "Pure Cork",
+          "url": "https://www.purecork.ie/whats-on/11197393/the-lee-sessions-trad-trail-the-wilton-bar-wilton-24-may-2026-7pm",
+          "date": "",
+          "seenAt": "2026-05-24T09:21:29.020Z"
+        },
+        {
+          "title": "The Lee Sessions Trad Trail",
+          "source": "Pure Cork",
+          "url": "https://www.purecork.ie/whats-on/11197393/the-lee-sessions-trad-trail-the-wilton-bar-wilton-24-may-2026-7pm",
+          "date": "",
+          "seenAt": "2026-05-24T09:19:56.244Z"
+        },
+        {
+          "title": "The Lee Sessions Trad Trail",
+          "source": "Pure Cork",
+          "url": "https://www.purecork.ie/whats-on/11197393/the-lee-sessions-trad-trail-the-wilton-bar-wilton-24-may-2026-7pm",
+          "date": "",
+          "seenAt": "2026-05-24T09:19:31.530Z"
+        },
+        {
+          "title": "The Lee Sessions Trad Trail",
+          "source": "Pure Cork",
+          "url": "https://www.purecork.ie/whats-on/11197393/the-lee-sessions-trad-trail-the-wilton-bar-wilton-24-may-2026-7pm",
+          "date": "",
+          "seenAt": "2026-05-24T09:19:25.512Z"
+        },
+        {
+          "title": "The Lee Sessions Trad Trail",
+          "source": "Pure Cork",
+          "url": "https://www.purecork.ie/whats-on/11197393/the-lee-sessions-trad-trail-the-wilton-bar-wilton-24-may-2026-7pm",
+          "date": "",
+          "seenAt": "2026-05-24T09:18:25.562Z"
+        }
+      ],
+      "suggestedQueries": [
+        "The Wilton events Cork",
+        "The Wilton what's on",
+        "The Wilton gigs",
+        "The Wilton tickets"
+      ],
+      "discoveredAt": "2026-05-24T08:39:11.762Z",
+      "status": "candidate",
+      "lastSeenAt": "2026-05-24T09:21:29.020Z"
+    },
+    {
+      "name": "Ballincollig and Dunmanway, Cork",
+      "area": "county",
+      "category": "trad",
+      "score": 39,
+      "evidenceCount": 13,
+      "evidence": [
+        {
+          "title": "Fleadh Cheoil Chorcaí 2026",
+          "source": "Cork Fleadh",
+          "url": "https://www.corkfleadh.ie/",
+          "date": "2026-05-04",
+          "seenAt": "2026-05-24T09:21:29.020Z"
+        },
+        {
+          "title": "Fleadh Cheoil Chorcaí 2026",
+          "source": "Cork Fleadh",
+          "url": "https://www.corkfleadh.ie/",
+          "date": "2026-05-04",
+          "seenAt": "2026-05-24T09:19:56.244Z"
+        },
+        {
+          "title": "Fleadh Cheoil Chorcaí 2026",
+          "source": "Cork Fleadh",
+          "url": "https://www.corkfleadh.ie/",
+          "date": "2026-05-04",
+          "seenAt": "2026-05-24T09:19:31.530Z"
+        },
+        {
+          "title": "Fleadh Cheoil Chorcaí 2026",
+          "source": "Cork Fleadh",
+          "url": "https://www.corkfleadh.ie/",
+          "date": "2026-05-04",
+          "seenAt": "2026-05-24T09:19:25.512Z"
+        },
+        {
+          "title": "Fleadh Cheoil Chorcaí 2026",
+          "source": "Cork Fleadh",
+          "url": "https://www.corkfleadh.ie/",
+          "date": "2026-05-04",
+          "seenAt": "2026-05-24T09:18:25.562Z"
+        }
+      ],
+      "suggestedQueries": [
+        "Ballincollig and Dunmanway, Cork events Cork",
+        "Ballincollig and Dunmanway, Cork what's on",
+        "Ballincollig and Dunmanway, Cork gigs",
+        "Ballincollig and Dunmanway, Cork tickets"
+      ],
+      "discoveredAt": "2026-05-24T08:39:11.762Z",
+      "status": "candidate",
+      "lastSeenAt": "2026-05-24T09:21:29.020Z"
+    },
+    {
+      "name": "Cork City Hall",
+      "area": "city",
+      "category": "trad",
+      "score": 39,
+      "evidenceCount": 13,
+      "evidence": [
+        {
+          "title": "Ceol Chorcaí",
+          "source": "Cork Fleadh",
+          "url": "https://www.corkfleadh.ie/",
+          "date": "2026-03-14",
+          "seenAt": "2026-05-24T09:21:29.020Z"
+        },
+        {
+          "title": "Ceol Chorcaí",
+          "source": "Cork Fleadh",
+          "url": "https://www.corkfleadh.ie/",
+          "date": "2026-03-14",
+          "seenAt": "2026-05-24T09:19:56.244Z"
+        },
+        {
+          "title": "Ceol Chorcaí",
+          "source": "Cork Fleadh",
+          "url": "https://www.corkfleadh.ie/",
+          "date": "2026-03-14",
+          "seenAt": "2026-05-24T09:19:31.530Z"
+        },
+        {
+          "title": "Ceol Chorcaí",
+          "source": "Cork Fleadh",
+          "url": "https://www.corkfleadh.ie/",
+          "date": "2026-03-14",
+          "seenAt": "2026-05-24T09:19:25.512Z"
+        },
+        {
+          "title": "Ceol Chorcaí",
+          "source": "Cork Fleadh",
+          "url": "https://www.corkfleadh.ie/",
+          "date": "2026-03-14",
+          "seenAt": "2026-05-24T09:18:25.562Z"
+        }
+      ],
+      "suggestedQueries": [
+        "Cork City Hall events Cork",
+        "Cork City Hall what's on",
+        "Cork City Hall gigs",
+        "Cork City Hall tickets"
+      ],
+      "discoveredAt": "2026-05-24T08:39:11.762Z",
+      "status": "candidate",
+      "lastSeenAt": "2026-05-24T09:21:29.020Z"
+    },
+    {
+      "name": "Virgin Media Park, Tramore Rd Cork",
+      "area": "county",
+      "category": "rugby",
+      "score": 39,
+      "evidenceCount": 13,
+      "evidence": [
+        {
+          "title": "Kingfishr",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/Virgin-Media-Park%2C-Tramore-Rd-Cork/Kingfishr/41976398/",
+          "date": "2026-06-11",
+          "seenAt": "2026-05-24T09:21:29.020Z"
+        },
+        {
+          "title": "Kingfishr",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/Virgin-Media-Park%2C-Tramore-Rd-Cork/Kingfishr/41976398/",
+          "date": "2026-06-11",
+          "seenAt": "2026-05-24T09:19:56.244Z"
+        },
+        {
+          "title": "Kingfishr",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/Virgin-Media-Park%2C-Tramore-Rd-Cork/Kingfishr/41976398/",
+          "date": "2026-06-11",
+          "seenAt": "2026-05-24T09:19:31.530Z"
+        },
+        {
+          "title": "Kingfishr",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/Virgin-Media-Park%2C-Tramore-Rd-Cork/Kingfishr/41976398/",
+          "date": "2026-06-11",
+          "seenAt": "2026-05-24T09:19:25.512Z"
+        },
+        {
+          "title": "Kingfishr",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/Virgin-Media-Park%2C-Tramore-Rd-Cork/Kingfishr/41976398/",
+          "date": "2026-06-11",
+          "seenAt": "2026-05-24T09:18:25.562Z"
+        }
+      ],
+      "suggestedQueries": [
+        "Virgin Media Park, Tramore Rd Cork events Cork",
+        "Virgin Media Park, Tramore Rd Cork what's on",
+        "Virgin Media Park, Tramore Rd Cork gigs",
+        "Virgin Media Park, Tramore Rd Cork tickets"
+      ],
+      "discoveredAt": "2026-05-24T08:39:11.762Z",
+      "status": "candidate",
+      "lastSeenAt": "2026-05-24T09:21:29.020Z"
+    },
+    {
+      "name": "Costigan's Pub",
+      "area": "county",
+      "category": "rugby",
+      "score": 39,
+      "evidenceCount": 13,
+      "evidence": [
+        {
+          "title": "Amusing Ourselves to Death by Neil Postman discussion",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/history-of-ideas-discussion-group-cork/events/314657465/",
+          "date": "2026-06-17",
+          "seenAt": "2026-05-24T09:21:29.020Z"
+        },
+        {
+          "title": "Amusing Ourselves to Death by Neil Postman discussion",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/history-of-ideas-discussion-group-cork/events/314657465/",
+          "date": "2026-06-17",
+          "seenAt": "2026-05-24T09:19:56.244Z"
+        },
+        {
+          "title": "Amusing Ourselves to Death by Neil Postman discussion",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/history-of-ideas-discussion-group-cork/events/314657465/",
+          "date": "2026-06-17",
+          "seenAt": "2026-05-24T09:19:31.530Z"
+        },
+        {
+          "title": "Amusing Ourselves to Death by Neil Postman discussion",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/history-of-ideas-discussion-group-cork/events/314657465/",
+          "date": "2026-06-17",
+          "seenAt": "2026-05-24T09:19:25.512Z"
+        },
+        {
+          "title": "Amusing Ourselves to Death by Neil Postman discussion",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/history-of-ideas-discussion-group-cork/events/314657465/",
+          "date": "2026-06-17",
+          "seenAt": "2026-05-24T09:18:25.562Z"
+        }
+      ],
+      "suggestedQueries": [
+        "Costigan's Pub events Cork",
+        "Costigan's Pub what's on",
+        "Costigan's Pub gigs",
+        "Costigan's Pub tickets"
+      ],
+      "discoveredAt": "2026-05-24T08:39:11.762Z",
+      "status": "candidate",
+      "lastSeenAt": "2026-05-24T09:21:29.020Z"
+    },
+    {
+      "name": "DJ Gwada Mike Crane Lane",
+      "area": "city",
+      "category": "trad",
+      "score": 24,
+      "evidenceCount": 8,
+      "evidence": [
+        {
+          "title": "Reggae Sundays with Live Band Yes “i” and DJ Gwada Mike Crane Lane Theatre Sun 24 May, 9pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11196900&rand=2649",
+          "date": "2026-05-24",
+          "seenAt": "2026-05-24T09:21:29.020Z"
+        },
+        {
+          "title": "Reggae Sundays with Live Band Yes “i” and DJ Gwada Mike Crane Lane Theatre Sun 24 May, 9pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11196900&rand=61708",
+          "date": "2026-05-24",
+          "seenAt": "2026-05-24T09:19:56.244Z"
+        },
+        {
+          "title": "Reggae Sundays with Live Band Yes “i” and DJ Gwada Mike Crane Lane Theatre Sun 24 May, 9pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11196900&rand=23921",
+          "date": "2026-05-24",
+          "seenAt": "2026-05-24T09:19:31.530Z"
+        },
+        {
+          "title": "Reggae Sundays with Live Band Yes “i” and DJ Gwada Mike Crane Lane Theatre Sun 24 May, 9pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11196900&rand=66615",
+          "date": "2026-05-24",
+          "seenAt": "2026-05-24T09:19:25.512Z"
+        },
+        {
+          "title": "Reggae Sundays with Live Band Yes “i” and DJ Gwada Mike Crane Lane Theatre Sun 24 May, 9pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11196900&rand=87561",
+          "date": "2026-05-24",
+          "seenAt": "2026-05-24T09:18:25.562Z"
+        }
+      ],
+      "suggestedQueries": [
+        "DJ Gwada Mike Crane Lane events Cork",
+        "DJ Gwada Mike Crane Lane what's on",
+        "DJ Gwada Mike Crane Lane gigs",
+        "DJ Gwada Mike Crane Lane tickets"
+      ],
+      "discoveredAt": "2026-05-24T09:10:41.129Z",
+      "status": "candidate",
+      "lastSeenAt": "2026-05-24T09:21:29.020Z"
+    },
+    {
+      "name": "DJ Ian Richards Crane Lane",
+      "area": "city",
+      "category": "music",
+      "score": 24,
+      "evidenceCount": 8,
+      "evidence": [
+        {
+          "title": "DJ Ian Richards Crane Lane Theatre Tue 26 May, 11pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11196903&rand=74211",
+          "date": "2026-05-26",
+          "seenAt": "2026-05-24T09:21:29.020Z"
+        },
+        {
+          "title": "DJ Ian Richards Crane Lane Theatre Tue 26 May, 11pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11196903&rand=72908",
+          "date": "2026-05-26",
+          "seenAt": "2026-05-24T09:19:56.244Z"
+        },
+        {
+          "title": "DJ Ian Richards Crane Lane Theatre Tue 26 May, 11pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11196903&rand=986",
+          "date": "2026-05-26",
+          "seenAt": "2026-05-24T09:19:31.530Z"
+        },
+        {
+          "title": "DJ Ian Richards Crane Lane Theatre Tue 26 May, 11pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11196903&rand=94715",
+          "date": "2026-05-26",
+          "seenAt": "2026-05-24T09:19:25.512Z"
+        },
+        {
+          "title": "DJ Ian Richards Crane Lane Theatre Tue 26 May, 11pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11196903&rand=96733",
+          "date": "2026-05-26",
+          "seenAt": "2026-05-24T09:18:25.562Z"
+        }
+      ],
+      "suggestedQueries": [
+        "DJ Ian Richards Crane Lane events Cork",
+        "DJ Ian Richards Crane Lane what's on",
+        "DJ Ian Richards Crane Lane gigs",
+        "DJ Ian Richards Crane Lane tickets"
+      ],
+      "discoveredAt": "2026-05-24T09:10:41.129Z",
+      "status": "candidate",
+      "lastSeenAt": "2026-05-24T09:21:29.020Z"
+    },
+    {
+      "name": "The Peoples Picture",
+      "area": "city",
+      "category": "trad",
+      "score": 24,
+      "evidenceCount": 8,
+      "evidence": [
+        {
+          "title": "The Lee Sessions Trad Trail Sin É Wed 27 May, 6:30pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11196375&rand=42143",
+          "date": "2026-05-27",
+          "seenAt": "2026-05-24T09:21:29.020Z"
+        },
+        {
+          "title": "The Lee Sessions Trad Trail Sin É Wed 27 May, 6:30pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11196375&rand=64919",
+          "date": "2026-05-27",
+          "seenAt": "2026-05-24T09:19:56.244Z"
+        },
+        {
+          "title": "The Lee Sessions Trad Trail Sin É Wed 27 May, 6:30pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11196375&rand=98406",
+          "date": "2026-05-27",
+          "seenAt": "2026-05-24T09:19:31.530Z"
+        },
+        {
+          "title": "The Lee Sessions Trad Trail Sin É Wed 27 May, 6:30pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11196375&rand=94882",
+          "date": "2026-05-27",
+          "seenAt": "2026-05-24T09:19:25.512Z"
+        },
+        {
+          "title": "The Lee Sessions Trad Trail Sin É Wed 27 May, 6:30pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11196375&rand=18377",
+          "date": "2026-05-27",
+          "seenAt": "2026-05-24T09:18:25.562Z"
+        }
+      ],
+      "suggestedQueries": [
+        "The Peoples Picture events Cork",
+        "The Peoples Picture what's on",
+        "The Peoples Picture gigs",
+        "The Peoples Picture tickets"
+      ],
+      "discoveredAt": "2026-05-24T09:10:41.129Z",
+      "status": "candidate",
+      "lastSeenAt": "2026-05-24T09:21:29.020Z"
+    },
+    {
+      "name": "Cosy",
+      "area": "city",
+      "category": "trad",
+      "score": 24,
+      "evidenceCount": 8,
+      "evidence": [
+        {
+          "title": "Cosy Club Sin É Wed 27 May, 9pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11196398&rand=5406",
+          "date": "2026-05-27",
+          "seenAt": "2026-05-24T09:21:29.020Z"
+        },
+        {
+          "title": "Cosy Club Sin É Wed 27 May, 9pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11196398&rand=47961",
+          "date": "2026-05-27",
+          "seenAt": "2026-05-24T09:19:56.244Z"
+        },
+        {
+          "title": "Cosy Club Sin É Wed 27 May, 9pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11196398&rand=94937",
+          "date": "2026-05-27",
+          "seenAt": "2026-05-24T09:19:31.530Z"
+        },
+        {
+          "title": "Cosy Club Sin É Wed 27 May, 9pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11196398&rand=65921",
+          "date": "2026-05-27",
+          "seenAt": "2026-05-24T09:19:25.512Z"
+        },
+        {
+          "title": "Cosy Club Sin É Wed 27 May, 9pm",
+          "source": "Cork Heritage Pubs",
+          "url": "https://www.corkheritagepubs.com/whats-on/?e=11196398&rand=56629",
+          "date": "2026-05-27",
+          "seenAt": "2026-05-24T09:18:25.562Z"
+        }
+      ],
+      "suggestedQueries": [
+        "Cosy events Cork",
+        "Cosy what's on",
+        "Cosy gigs",
+        "Cosy tickets"
+      ],
+      "discoveredAt": "2026-05-24T09:10:41.129Z",
+      "status": "candidate",
+      "lastSeenAt": "2026-05-24T09:21:29.020Z"
+    },
+    {
+      "name": "debarra",
+      "area": "west-cork",
+      "category": "festival",
+      "score": 14,
+      "evidenceCount": 1,
+      "evidence": [
+        {
+          "title": "16 event record(s) found during validation",
+          "source": "User suggestion",
+          "url": "https://debarra.ie/events/",
+          "date": "",
+          "seenAt": "2026-05-24T08:52:39.737Z"
+        }
+      ],
+      "suggestedQueries": [
+        "debarra events Cork",
+        "debarra what's on",
+        "debarra gigs",
+        "debarra tickets"
+      ],
+      "discoveredAt": "2026-05-24T08:52:39.737Z",
+      "lastSeenAt": "2026-05-24T08:52:39.737Z",
+      "status": "candidate"
+    },
+    {
+      "name": "coughlans",
+      "area": "county",
+      "category": "festival",
+      "score": 14,
+      "evidenceCount": 2,
+      "evidence": [
+        {
+          "title": "20 event record(s) found during validation",
+          "source": "User suggestion",
+          "url": "https://www.coughlans.ie/",
+          "date": "",
+          "seenAt": "2026-05-24T09:21:22.687Z"
+        },
+        {
+          "title": "User suggested venue/event search requisite",
+          "source": "User suggestion",
+          "url": "",
+          "date": "",
+          "seenAt": "2026-05-24T09:19:40.750Z"
+        }
+      ],
+      "suggestedQueries": [
+        "coughlans events Cork",
+        "coughlans what's on",
+        "coughlans gigs",
+        "coughlans tickets"
+      ],
+      "discoveredAt": "2026-05-24T09:19:40.750Z",
+      "lastSeenAt": "2026-05-24T09:21:22.687Z",
+      "status": "candidate"
+    },
+    {
+      "name": "irishshows.org",
+      "area": "county",
+      "category": "festival",
+      "score": 7,
+      "evidenceCount": 1,
+      "evidence": [
+        {
+          "title": "User suggested venue/event search requisite",
+          "source": "User suggestion",
+          "url": "",
+          "date": "",
+          "seenAt": "2026-05-24T09:15:13.193Z"
+        }
+      ],
+      "suggestedQueries": [
+        "irishshows.org events Cork",
+        "irishshows.org what's on",
+        "irishshows.org gigs",
+        "irishshows.org tickets"
+      ],
+      "discoveredAt": "2026-05-24T09:15:13.193Z",
+      "lastSeenAt": "2026-05-24T09:15:13.193Z",
+      "status": "candidate"
+    },
+    {
+      "name": "agricultural shows",
+      "area": "county",
+      "category": "agriculture",
+      "score": 7,
+      "evidenceCount": 1,
+      "evidence": [
+        {
+          "title": "User suggested venue/event search requisite",
+          "source": "User suggestion",
+          "url": "",
+          "date": "",
+          "seenAt": "2026-05-24T09:14:38.054Z"
+        }
+      ],
+      "suggestedQueries": [
+        "agricultural shows events Cork",
+        "agricultural shows what's on",
+        "agricultural shows gigs",
+        "agricultural shows tickets"
+      ],
+      "discoveredAt": "2026-05-24T09:14:38.054Z",
+      "lastSeenAt": "2026-05-24T09:14:38.054Z",
+      "status": "candidate"
+    },
+    {
+      "name": "farmer's markets",
+      "area": "county",
+      "category": "food",
+      "score": 7,
+      "evidenceCount": 1,
+      "evidence": [
+        {
+          "title": "User suggested venue/event search requisite",
+          "source": "User suggestion",
+          "url": "",
+          "date": "",
+          "seenAt": "2026-05-24T09:14:09.135Z"
+        }
+      ],
+      "suggestedQueries": [
+        "farmer's markets events Cork",
+        "farmer's markets what's on",
+        "farmer's markets gigs",
+        "farmer's markets tickets"
+      ],
+      "discoveredAt": "2026-05-24T09:14:09.135Z",
+      "lastSeenAt": "2026-05-24T09:14:09.135Z",
+      "status": "candidate"
+    },
+    {
+      "name": "skibereen farmers market",
+      "area": "west-cork",
+      "category": "food",
+      "score": 7,
+      "evidenceCount": 1,
+      "evidence": [
+        {
+          "title": "User suggested venue/event search requisite",
+          "source": "User suggestion",
+          "url": "",
+          "date": "",
+          "seenAt": "2026-05-24T09:13:50.433Z"
+        }
+      ],
+      "suggestedQueries": [
+        "skibereen farmers market events Cork",
+        "skibereen farmers market what's on",
+        "skibereen farmers market gigs",
+        "skibereen farmers market tickets"
+      ],
+      "discoveredAt": "2026-05-24T09:13:50.433Z",
+      "lastSeenAt": "2026-05-24T09:13:50.433Z",
+      "status": "candidate"
+    },
+    {
+      "name": "tastecork.com",
+      "area": "west-cork",
+      "category": "food",
+      "score": 7,
+      "evidenceCount": 1,
+      "evidence": [
+        {
+          "title": "User suggested venue/event search requisite",
+          "source": "User suggestion",
+          "url": "",
+          "date": "",
+          "seenAt": "2026-05-24T09:12:57.021Z"
+        }
+      ],
+      "suggestedQueries": [
+        "tastecork.com events Cork",
+        "tastecork.com what's on",
+        "tastecork.com gigs",
+        "tastecork.com tickets"
+      ],
+      "discoveredAt": "2026-05-24T09:12:57.021Z",
+      "lastSeenAt": "2026-05-24T09:12:57.021Z",
+      "status": "candidate"
+    },
+    {
+      "name": "Skibbereen market",
+      "area": "county",
+      "category": "food",
+      "score": 7,
+      "evidenceCount": 1,
+      "evidence": [
+        {
+          "title": "User suggested venue/event search requisite",
+          "source": "User suggestion",
+          "url": "",
+          "date": "",
+          "seenAt": "2026-05-24T09:12:00.287Z"
+        }
+      ],
+      "suggestedQueries": [
+        "Skibbereen market events Cork",
+        "Skibbereen market what's on",
+        "Skibbereen market gigs",
+        "Skibbereen market tickets"
+      ],
+      "discoveredAt": "2026-05-24T09:12:00.287Z",
+      "lastSeenAt": "2026-05-24T09:12:00.287Z",
+      "status": "candidate"
+    },
+    {
+      "name": "cypress avenue",
+      "area": "county",
+      "category": "festival",
+      "score": 7,
+      "evidenceCount": 1,
+      "evidence": [
+        {
+          "title": "User suggested venue/event search requisite",
+          "source": "User suggestion",
+          "url": "",
+          "date": "",
+          "seenAt": "2026-05-24T09:11:45.646Z"
+        }
+      ],
+      "suggestedQueries": [
+        "cypress avenue events Cork",
+        "cypress avenue what's on",
+        "cypress avenue gigs",
+        "cypress avenue tickets"
+      ],
+      "discoveredAt": "2026-05-24T09:11:45.646Z",
+      "lastSeenAt": "2026-05-24T09:11:45.646Z",
+      "status": "candidate"
+    },
+    {
+      "name": "coughlans cork",
+      "area": "west-cork",
+      "category": "festival",
+      "score": 7,
+      "evidenceCount": 1,
+      "evidence": [
+        {
+          "title": "User suggested venue/event search requisite",
+          "source": "User suggestion",
+          "url": "",
+          "date": "",
+          "seenAt": "2026-05-24T08:54:16.035Z"
+        }
+      ],
+      "suggestedQueries": [
+        "coughlans cork events Cork",
+        "coughlans cork what's on",
+        "coughlans cork gigs",
+        "coughlans cork tickets"
+      ],
+      "discoveredAt": "2026-05-24T08:54:16.035Z",
+      "lastSeenAt": "2026-05-24T08:54:16.035Z",
+      "status": "candidate"
+    },
+    {
+      "name": "Connolly's of Leap",
+      "area": "west-cork",
+      "category": "music",
+      "score": 7,
+      "evidenceCount": 2,
+      "evidence": [
+        {
+          "title": "User suggested venue/event search requisite",
+          "source": "User suggestion",
+          "url": "",
+          "date": "",
+          "seenAt": "2026-05-24T08:52:20.250Z"
+        },
+        {
+          "title": "User suggested venue/event search requisite",
+          "source": "User suggestion",
+          "url": "",
+          "date": "",
+          "seenAt": "2026-05-24T08:51:32.864Z"
+        }
+      ],
+      "suggestedQueries": [
+        "Connolly's of Leap events Cork",
+        "Connolly's of Leap what's on",
+        "Connolly's of Leap gigs",
+        "Connolly's of Leap tickets"
+      ],
+      "discoveredAt": "2026-05-24T08:51:32.864Z",
+      "lastSeenAt": "2026-05-24T08:52:20.250Z",
+      "status": "candidate"
+    },
+    {
+      "name": "Coughlans on Saturday",
+      "area": "west-cork",
+      "category": "arts",
+      "score": 5,
+      "evidenceCount": 1,
+      "evidence": [
+        {
+          "title": "Things happening around Cork, May 14th - May 19th (events, gigs etc.)",
+          "source": "Reddit r/cork",
+          "url": "https://www.reddit.com/r/cork/comments/1tcto1v/things_happening_around_cork_may_14th_may_19th/",
+          "date": "2026-05-14",
+          "seenAt": "2026-05-24T08:39:11.762Z"
+        }
+      ],
+      "suggestedQueries": [
+        "Coughlans on Saturday events Cork",
+        "Coughlans on Saturday what's on",
+        "Coughlans on Saturday gigs",
+        "Coughlans on Saturday tickets"
+      ],
+      "discoveredAt": "2026-05-24T08:39:11.762Z",
+      "status": "candidate",
+      "lastSeenAt": "2026-05-24T08:39:11.762Z"
+    },
+    {
+      "name": "Rebel Reads Bookshop Marina Commercial Park",
+      "area": "city",
+      "category": "arts",
+      "score": 4,
+      "evidenceCount": 1,
+      "evidence": [
+        {
+          "title": "Things happening around Cork, May 6th - May 12th (events, gigs etc.)",
+          "source": "Reddit r/cork",
+          "url": "https://www.reddit.com/r/cork/comments/1t5ghmq/things_happening_around_cork_may_6th_may_12th/",
+          "date": "2026-05-06",
+          "seenAt": "2026-05-24T08:39:11.762Z"
+        }
+      ],
+      "suggestedQueries": [
+        "Rebel Reads Bookshop Marina Commercial Park events Cork",
+        "Rebel Reads Bookshop Marina Commercial Park what's on",
+        "Rebel Reads Bookshop Marina Commercial Park gigs",
+        "Rebel Reads Bookshop Marina Commercial Park tickets"
+      ],
+      "discoveredAt": "2026-05-24T08:39:11.762Z",
+      "status": "candidate",
+      "lastSeenAt": "2026-05-24T08:39:11.762Z"
+    },
+    {
+      "name": "Cork.",
+      "area": "county",
+      "category": "music",
+      "score": 4,
+      "evidenceCount": 1,
+      "evidence": [
+        {
+          "title": "The Devout - Depeche Mode Tribute - Cork, Ireland",
+          "source": "Skiddle Cork",
+          "url": "https://www.skiddle.com/whats-on/Ireland/Kino/The-Devout---Depeche-Mode-Tribute---Cork-Ireland/41583303/",
+          "date": "2026-06-11",
+          "seenAt": "2026-05-24T08:39:11.762Z"
+        }
+      ],
+      "suggestedQueries": [
+        "Cork. events Cork",
+        "Cork. what's on",
+        "Cork. gigs",
+        "Cork. tickets"
+      ],
+      "discoveredAt": "2026-05-24T08:39:11.762Z",
+      "status": "candidate",
+      "lastSeenAt": "2026-05-24T08:39:11.762Z"
+    },
+    {
+      "name": "Bodega",
+      "area": "county",
+      "category": "trad",
+      "score": 4,
+      "evidenceCount": 1,
+      "evidence": [
+        {
+          "title": "Come along, play games, have fun, make friends!",
+          "source": "Meetup Cork",
+          "url": "https://www.meetup.com/iga-cork/events/314646088/",
+          "date": "2026-05-25",
+          "seenAt": "2026-05-24T08:39:11.762Z"
+        }
+      ],
+      "suggestedQueries": [
+        "Bodega events Cork",
+        "Bodega what's on",
+        "Bodega gigs",
+        "Bodega tickets"
+      ],
+      "discoveredAt": "2026-05-24T08:39:11.762Z",
+      "status": "candidate",
+      "lastSeenAt": "2026-05-24T08:39:11.762Z"
+    },
+    {
+      "name": "Middleton",
+      "area": "county",
+      "category": "rugby",
+      "score": 3,
+      "evidenceCount": 1,
+      "evidence": [
+        {
+          "title": "What time do gigs in Virgin Media Park usually finish?",
+          "source": "Reddit r/cork",
+          "url": "https://www.reddit.com/r/cork/comments/1tesir7/what_time_do_gigs_in_virgin_media_park_usually/",
+          "date": "2026-05-16",
+          "seenAt": "2026-05-24T08:39:11.762Z"
+        }
+      ],
+      "suggestedQueries": [
+        "Middleton events Cork",
+        "Middleton what's on",
+        "Middleton gigs",
+        "Middleton tickets"
+      ],
+      "discoveredAt": "2026-05-24T08:39:11.762Z",
+      "status": "candidate",
+      "lastSeenAt": "2026-05-24T08:39:11.762Z"
+    }
+  ],
+  "ignored": [],
+  "updatedAt": "2026-05-24T09:23:24.115Z"
+}

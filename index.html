@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cork Event Radar</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-mark">CE</span>
+          <div>
+            <h1>Cork Event Radar</h1>
+            <p>West Cork, Cork City, and county-wide plans</p>
+          </div>
+        </div>
+
+        <section class="panel">
+          <h2>Area</h2>
+          <div class="segmented" role="group" aria-label="Area filter">
+            <button class="segment active" data-area="all" type="button">All Cork</button>
+            <button class="segment" data-area="west-cork" type="button">West Cork</button>
+            <button class="segment" data-area="city" type="button">City</button>
+            <button class="segment" data-area="county" type="button">County</button>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Classification</h2>
+          <div id="categoryFilters" class="check-list"></div>
+        </section>
+
+        <section class="panel source-panel">
+          <h2>Sources</h2>
+          <p>Live scan looks for event data, listings, and structured event markup where the source allows it.</p>
+          <button id="refreshButton" class="primary-action" type="button">Scan Sources</button>
+        </section>
+      </aside>
+
+      <main>
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Local discovery dashboard</p>
+            <h2>What is happening around Cork?</h2>
+          </div>
+          <div id="engineStatus" class="status-card ready" aria-live="polite">
+            <span class="engine-line">
+              <span class="engine-icon" aria-hidden="true"></span>
+              <span id="sourceStatus">Engine ready</span>
+            </span>
+            <strong id="lastUpdated">Not scanned yet</strong>
+          </div>
+        </header>
+
+        <section class="filters" aria-label="Search and date filters">
+          <label>
+            Search
+            <input id="searchInput" type="search" placeholder="music, rugby, Clonakilty, food, festival..." />
+          </label>
+          <label>
+            From
+            <input id="fromDate" type="date" />
+          </label>
+          <label>
+            To
+            <input id="toDate" type="date" />
+          </label>
+          <button id="enterButton" class="enter-action" type="button">
+            <span class="button-icon" aria-hidden="true"></span>
+            <span id="enterButtonText">Enter</span>
+          </button>
+          <button id="clearFilters" class="secondary-action" type="button">Clear</button>
+        </section>
+
+        <section class="metrics" aria-label="Event summary">
+          <article>
+            <span id="totalEvents">0</span>
+            <p>matching events</p>
+          </article>
+          <article>
+            <span id="thisMonth">0</span>
+            <p>in the next 30 days</p>
+          </article>
+          <article>
+            <span id="westCorkCount">0</span>
+            <p>West Cork picks</p>
+          </article>
+          <article>
+            <span id="weekendCount">0</span>
+            <p>weekend ideas</p>
+          </article>
+        </section>
+
+        <section class="source-strip" aria-label="Source shortcuts">
+          <div>
+            <p class="eyebrow">Quick source checks</p>
+            <h3>Open the original listings when you want to book or verify details</h3>
+          </div>
+          <div id="sourceLinks" class="source-links"></div>
+        </section>
+
+        <section class="learning-strip" aria-label="Learning engine">
+          <div>
+            <p class="eyebrow">Learning engine</p>
+            <h3>Venue and source candidates discovered from scans</h3>
+          </div>
+          <div id="learningCandidates" class="learning-candidates">
+            <span>No learned candidates yet</span>
+          </div>
+        </section>
+
+        <section class="suggestion-panel" aria-label="Suggest a place or event source">
+          <div>
+            <p class="eyebrow">Teach the engine</p>
+            <h3>Suggest a place, event, or listings page</h3>
+          </div>
+          <div class="suggestion-fields">
+            <textarea
+              id="suggestionInput"
+              rows="3"
+              placeholder="Example: Connolly's of Leap gigs, Ballydehob Jazz Festival, or https://example.com/events"
+            ></textarea>
+            <div class="suggestion-actions">
+              <select id="suggestionArea" aria-label="Suggested area">
+                <option value="west-cork">West Cork</option>
+                <option value="city">Cork City</option>
+                <option value="county">County Cork</option>
+                <option value="all">All Cork</option>
+              </select>
+              <button id="suggestionButton" class="enter-action" type="button">Suggest</button>
+            </div>
+            <p id="suggestionStatus" class="suggestion-status" role="status" aria-live="polite"></p>
+          </div>
+        </section>
+
+        <section id="eventList" class="event-list" aria-live="polite"></section>
+      </main>
+    </div>
+
+    <template id="eventTemplate">
+      <article class="event-card">
+        <div class="event-date">
+          <span class="month"></span>
+          <strong class="day"></strong>
+        </div>
+        <div class="event-body">
+          <div class="event-head">
+            <div>
+              <p class="meta"></p>
+              <h3></h3>
+            </div>
+            <span class="source-badge"></span>
+          </div>
+          <p class="summary"></p>
+          <div class="event-facts">
+            <span class="location"></span>
+            <span class="time"></span>
+            <span class="confidence"></span>
+          </div>
+          <div class="tags"></div>
+          <a class="event-link" target="_blank" rel="noreferrer">Open source</a>
+        </div>
+      </article>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>
