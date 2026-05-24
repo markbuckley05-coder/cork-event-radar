@@ -204,7 +204,7 @@ function getActiveSources(searchQuery = "") {
       })
     : priorityCandidates;
   const queryCandidate = activityCandidateFromQuery(searchQuery);
-  const activeCandidates = [queryCandidate, ...queryFocusedCandidates, ...(normalizedQuery ? [] : searchableCandidates)]
+  const activeCandidates = [...queryFocusedCandidates, queryCandidate, ...(normalizedQuery ? [] : searchableCandidates)]
     .filter(Boolean)
     .filter((candidate, index, list) => list.findIndex((item) => normalizeSearchText(item.name) === normalizeSearchText(candidate.name)) === index)
     .slice(0, 16);
@@ -885,6 +885,8 @@ function extractHeuristicEvents(html, source) {
     "master fixture plan",
     "county championship tickets",
     "fixtures & results",
+    "view all events",
+    "more results",
     "men's team",
     "mens team",
     "women's team",
@@ -1042,7 +1044,15 @@ function learnedSearchTermMatches(event, source) {
 }
 
 function filterLearnedSearchEvents(events, source) {
-  return events.filter((event) => learnedSearchTermMatches(event, source));
+  if (!source.learnedSearch || !source.searchTerm) return events;
+  const learnedTags = activityTermsFor(source.searchTerm, source.aliases || []).filter(Boolean);
+  return events
+    .filter((event) => learnedSearchTermMatches(event, source))
+    .map((event) => ({
+      ...event,
+      searchTerm: source.searchTerm,
+      tags: [...new Set([...(event.tags || []), ...learnedTags])],
+    }));
 }
 
 function isRelevantDiscoveredSource(text, source) {
@@ -1288,7 +1298,7 @@ async function fetchSource(source) {
 function eventMatchesQuery(event, params) {
   const q = normalizeSearchText(params.get("q") || "");
   if (!q) return true;
-  const haystack = normalizeSearchText([event.title, event.summary, event.location, event.category, ...(event.tags || [])].join(" "));
+  const haystack = normalizeSearchText([event.title, event.summary, event.location, event.category, event.searchTerm, ...(event.tags || [])].join(" "));
   return haystack.includes(q) || haystack.replace(/\s+/g, "").includes(q.replace(/\s+/g, ""));
 }
 
