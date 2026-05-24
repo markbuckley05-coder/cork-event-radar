@@ -106,21 +106,25 @@ function getActiveSources() {
     .slice(0, 8)
     .flatMap((candidate) => {
       const query = encodeURIComponent(candidate.name);
+      const category = candidate.category || "festival";
+      const searchTerms = encodeURIComponent(categorySearchTerms(category));
       return [
         {
           name: `Learned Reddit search: ${candidate.name}`,
-          url: `https://www.reddit.com/r/cork/search.json?q=${query}%20event%20OR%20gig%20OR%20music&restrict_sr=1&sort=new&t=month`,
+          url: `https://www.reddit.com/r/cork/search.json?q=${query}%20${searchTerms}&restrict_sr=1&sort=new&t=month`,
           area: candidate.area || "county",
-          category: candidate.category || "festival",
+          category,
           kind: "reddit",
           learned: true,
+          learnedSearch: true,
         },
         {
           name: `Learned Eventbrite search: ${candidate.name}`,
           url: `https://www.eventbrite.ie/d/ireland--cork/events/?q=${query}`,
           area: candidate.area || "county",
-          category: candidate.category || "festival",
+          category,
           learned: true,
+          learnedSearch: true,
         },
       ];
     });
@@ -256,12 +260,33 @@ function normalizeDate(value) {
   return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString().slice(0, 10);
 }
 
+function containsTerm(text, term) {
+  const escaped = String(term).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, "i").test(text);
+}
+
+function categorySearchTerms(category) {
+  const terms = {
+    sport: "fixture OR match OR game OR club OR tournament",
+    rugby: "fixture OR match OR game OR tickets",
+    gaa: "fixture OR match OR hurling OR football",
+    trad: "session OR fleadh OR ceili OR trad",
+    music: "gig OR concert OR music OR tickets",
+    arts: "show OR theatre OR performance OR exhibition",
+    markets: "market OR farmers market OR food",
+    food: "food OR dining OR tasting OR market",
+    agriculture: "show OR fair OR farm OR agriculture",
+    family: "family OR kids OR children",
+  };
+  return terms[category] || "event OR gig OR festival";
+}
+
 function inferCategory(text, fallback, sourceName = "") {
   if (/cork gaa/i.test(sourceName) || fallback === "gaa") return "gaa";
-  if (/munster rugby/i.test(sourceName) || fallback === "rugby") return "rugby";
+  if (/munster rugby/i.test(sourceName)) return "rugby";
   if (/cork on a fork/i.test(sourceName) || fallback === "food") return "food";
 
-  const haystack = String(text || "").toLowerCase();
+  const haystack = normalizeSearchText(text || "");
   if (/comedy|stand up|stand-up/i.test(haystack)) return "arts";
   const tradTerms = [
     "irish traditional",
@@ -280,6 +305,9 @@ function inferCategory(text, fallback, sourceName = "") {
     "comhaltas",
     "set dancing",
     "sean nos",
+    "sean nos singing",
+    "seanos",
+    "shanos",
     "sean-nós",
     "scoil eigse",
     "scoil éigse",
@@ -289,21 +317,59 @@ function inferCategory(text, fallback, sourceName = "") {
     "ceol chorcai",
     "ceol chorcaí",
   ];
-  if (fallback === "trad" || tradTerms.some((term) => haystack.includes(term))) return "trad";
+  if (fallback === "trad" || tradTerms.some((term) => containsTerm(haystack, term))) return "trad";
+  if (/\b(fc|afc|rovers|rangers|united|wanderers|ramblers|athletic)\b/i.test(haystack)) return "sport";
 
   const tests = [
     ["markets", ["farmers market", "farmer's market", "farmers' market", "market", "craft fair", "food market", "producer market"]],
     ["food", ["food", "fork", "taste", "chef", "market", "dining", "drink", "beer"]],
     ["rugby", ["rugby", "munster", "urc", "virgin media park"]],
     ["gaa", ["gaa", "hurling", "camogie", "gaelic football"]],
-    ["sport", ["fixture", "match", "sports", "soccer", "football club", "casual games"]],
+    [
+      "sport",
+      [
+        "fixture",
+        "fixtures",
+        "match",
+        "matches",
+        "sports",
+        "casual games",
+        "soccer",
+        "football",
+        "football club",
+        "football match",
+        "league of ireland",
+        "loi",
+        "cork city fc",
+        "turners cross",
+        "st colman's park",
+        "st colmans park",
+        "rowing",
+        "volleyball",
+        "basketball",
+        "athletics",
+        "running",
+        "cycling",
+        "tennis",
+        "swimming",
+        "boxing",
+        "martial arts",
+        "hockey",
+        "cricket",
+        "badminton",
+        "sailing",
+        "triathlon",
+        "marathon",
+        "parkrun",
+      ],
+    ],
     ["music", ["music", "gig", "concert", "jazz", "band", "dj", "chamber", "folk club"]],
     ["agriculture", ["agriculture", "agri", "farm", "cattle", "ploughing"]],
     ["family", ["family", "children", "kids"]],
-    ["arts", ["theatre", "opera", "comedy", "arts", "film", "exhibition"]],
+    ["arts", ["theatre", "theater", "opera", "comedy", "arts", "film", "exhibition", "kabuki", "drama", "dance performance"]],
     ["festival", ["festival", "fest"]],
   ];
-  const match = tests.find(([, words]) => words.some((word) => haystack.includes(word)));
+  const match = tests.find(([, words]) => words.some((word) => containsTerm(haystack, word)));
   return match ? match[0] : fallback || "festival";
 }
 
@@ -763,8 +829,21 @@ function extractVenueNames(event) {
   return [...names];
 }
 
-function candidateQueries(name) {
+function candidateQueries(name, category = "festival") {
+  const categoryQueries = {
+    sport: [`${name} fixtures Cork`, `${name} matches Cork`, `${name} club Cork`],
+    rugby: [`${name} rugby fixtures Cork`, `${name} rugby matches Cork`],
+    gaa: [`${name} GAA fixtures Cork`, `${name} hurling football Cork`],
+    trad: [`${name} trad Cork`, `${name} session Cork`, `${name} fleadh ceili Cork`],
+    music: [`${name} gigs Cork`, `${name} concerts Cork`],
+    arts: [`${name} theatre Cork`, `${name} performance Cork`, `${name} show Cork`],
+    markets: [`${name} market Cork`, `${name} farmers market Cork`],
+    food: [`${name} food Cork`, `${name} tasting Cork`],
+    agriculture: [`${name} agriculture Cork`, `${name} farm show Cork`],
+    family: [`${name} family Cork`, `${name} kids Cork`],
+  };
   return [
+    ...(categoryQueries[category] || []),
     `${name} events Cork`,
     `${name} what's on`,
     `${name} gigs`,
@@ -778,6 +857,23 @@ function topLearningSummary(learning) {
     learnedSourceCount: learning.learnedSources.length,
     topCandidates: learning.candidates.slice(0, 8),
   };
+}
+
+function categoryLabel(category) {
+  const labels = {
+    food: "Food & Drink",
+    festival: "Festivals",
+    music: "Music & Gigs",
+    trad: "Irish Trad & Ceili",
+    sport: "Sport & Matches",
+    rugby: "Rugby",
+    gaa: "GAA",
+    arts: "Arts & Theatre",
+    family: "Family",
+    agriculture: "Agriculture",
+    markets: "Markets",
+  };
+  return labels[category] || "Events";
 }
 
 function findSuggestionUrl(value) {
@@ -856,7 +952,7 @@ function mergeCandidate(learning, candidate) {
     existing.status = existing.status || "candidate";
     existing.area = candidate.area || existing.area || "county";
     existing.category = candidate.category || existing.category || "festival";
-    existing.suggestedQueries = candidateQueries(existing.name);
+    existing.suggestedQueries = candidateQueries(existing.name, existing.category);
     existing.evidence = [evidence, ...(existing.evidence || [])].slice(0, 5);
     return existing;
   }
@@ -868,7 +964,7 @@ function mergeCandidate(learning, candidate) {
     score: candidate.score || 6,
     evidenceCount: 1,
     evidence: [evidence],
-    suggestedQueries: candidateQueries(candidate.name),
+    suggestedQueries: candidateQueries(candidate.name, candidate.category || "festival"),
     discoveredAt: now,
     lastSeenAt: now,
     status: "candidate",
@@ -925,14 +1021,14 @@ function learnFromScan(results) {
           score: 0,
           evidenceCount: 0,
           evidence: [],
-          suggestedQueries: candidateQueries(name),
+          suggestedQueries: candidateQueries(name, event.category || "festival"),
           discoveredAt: now,
           status: "candidate",
         };
 
         const boost =
           (isAggregatorSource(result.source) ? 2 : 1) +
-          (["music", "trad", "arts", "festival", "food"].includes(event.category) ? 1 : 0) +
+          (["music", "trad", "arts", "festival", "food", "sport", "rugby", "gaa"].includes(event.category) ? 1 : 0) +
           (event.area === "west-cork" ? 1 : 0) +
           (event.startDate ? 1 : 0);
 
@@ -941,7 +1037,7 @@ function learnFromScan(results) {
         existing.area = existing.area === "west-cork" || event.area !== "west-cork" ? existing.area : event.area;
         existing.category = existing.category || event.category || "festival";
         existing.lastSeenAt = now;
-        existing.suggestedQueries = candidateQueries(existing.name);
+        existing.suggestedQueries = candidateQueries(existing.name, existing.category);
         existing.evidence = [
           {
             title: event.title,
@@ -1026,7 +1122,7 @@ async function handleSuggest(request, response) {
         url: canonical.url,
         evidenceTitle: `User suggested ${part}`,
       });
-      accepted.push({ name: candidate.name, status: "learned-source" });
+      accepted.push({ name: candidate.name, category: candidate.category, status: "learned-source" });
       continue;
     }
 
@@ -1057,7 +1153,7 @@ async function handleSuggest(request, response) {
           url,
           evidenceTitle: "User suggested a fetchable URL without clear event markup",
         });
-        accepted.push({ name: candidate.name, status: "candidate" });
+        accepted.push({ name: candidate.name, category: candidate.category, status: "candidate" });
         continue;
       }
 
@@ -1080,7 +1176,7 @@ async function handleSuggest(request, response) {
         url,
         evidenceTitle: `${test.events.length} event record(s) found during validation`,
       });
-      accepted.push({ name: candidate.name, status: "learned-source" });
+      accepted.push({ name: candidate.name, category: candidate.category, status: "learned-source" });
       continue;
     }
 
@@ -1099,7 +1195,7 @@ async function handleSuggest(request, response) {
       score: 7,
       evidenceTitle: "User suggested venue/event search requisite",
     });
-    accepted.push({ name: candidate.name, status: "candidate" });
+    accepted.push({ name: candidate.name, category: candidate.category, status: "candidate" });
   }
 
   if (!accepted.length) {
@@ -1117,7 +1213,7 @@ async function handleSuggest(request, response) {
   sendJson(response, 200, {
     ok: true,
     status: accepted.some((item) => item.status === "learned-source") ? "learned-source" : "candidate",
-    message: `Accepted ${accepted.map((item) => `"${item.name}"`).join(", ")}.${rejectedMessage}`,
+    message: `Accepted ${accepted.map((item) => `"${item.name}" as ${categoryLabel(item.category)}`).join(", ")}.${rejectedMessage}`,
     accepted,
     rejected,
     learning: topLearningSummary(saved),
