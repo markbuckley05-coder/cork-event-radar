@@ -32,7 +32,18 @@ Start Command: npm start
 
 Render will provide a public URL ending in `.onrender.com`.
 
-### 3. Test It
+### 3. Optional LLM Planning
+
+The dashboard works without an LLM, but the **Teach the Engine** box is much smarter when an OpenAI API key is configured. In Render, open the service settings and add:
+
+```text
+OPENAI_API_KEY=your OpenAI API key
+OPENAI_MODEL=gpt-4.1-mini
+```
+
+`OPENAI_MODEL` is optional. If it is not set, the app uses `gpt-4.1-mini`.
+
+### 4. Test It
 
 Open the Render URL and click **Enter** or **Scan Sources**.
 

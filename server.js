@@ -5,6 +5,8 @@ const path = require("path");
 const PORT = Number(process.env.PORT || 4173);
 const ROOT = __dirname;
 const LEARNING_FILE = path.join(ROOT, "learned-sources.json");
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
+const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4.1-mini";
 
 const seedSources = [
   { name: "Pure Cork", url: "https://www.purecork.ie/whats-on", area: "county", category: "festival" },
@@ -89,19 +91,24 @@ function sourceIdentity(source) {
   return normalizeSearchText(source.url || source.name || "");
 }
 
-function activityTermsFor(value) {
+function activityTermsFor(value, aliases = []) {
   const term = normalizeSearchText(value);
-  const aliases = {
+  const builtInAliases = {
     soccer: ["soccer", "football", "football club", "fc", "afc", "league of ireland"],
     football: ["football", "soccer", "football club", "fc", "afc", "league of ireland"],
   };
-  return [...new Set([term, ...(aliases[term] || [])].filter(Boolean))];
+  return [...new Set([term, ...(builtInAliases[term] || []), ...aliases.map(normalizeSearchText)].filter(Boolean))];
+}
+
+function candidateActivityTerms(candidate) {
+  return activityTermsFor(candidate.name, [...(candidate.aliases || []), ...(candidate.searchTerms || [])]);
 }
 
 function activityDiscoveryQueries(candidate) {
   const name = cleanText(candidate.name);
   const category = candidate.category || "festival";
-  const terms = activityTermsFor(name);
+  const terms = candidateActivityTerms(candidate);
+  const planned = dedupeStrings(candidate.positiveQueries || candidate.suggestedQueries || [], 16);
   const templates = {
     sport: (term) => [
       `${term} Cork events`,
@@ -118,12 +125,12 @@ function activityDiscoveryQueries(candidate) {
     markets: (term) => [`${term} Cork market`, `${term} Cork events`],
   };
   const builder = templates[category] || ((term) => [`${term} Cork events`, `${term} Cork what's on`]);
-  return terms.flatMap((term) => builder(term));
+  return [...planned, ...terms.flatMap((term) => builder(term))];
 }
 
 function activityDiscoverySourcesForCandidate(candidate) {
-  if (!isActivitySearchPrompt(candidate.name, candidate.category)) return [];
-  const searchTerms = activityTermsFor(candidate.name);
+  if (!isActivitySearchPrompt(candidate.name, candidate.category) && !(candidate.positiveQueries || candidate.suggestedQueries || []).length) return [];
+  const searchTerms = candidateActivityTerms(candidate);
   return activityDiscoveryQueries(candidate).slice(0, 12).map((query) => ({
     name: `Activity discovery: ${query}`,
     url: `https://duckduckgo.com/html/?q=${encodeURIComponent(query)}`,
@@ -134,6 +141,9 @@ function activityDiscoverySourcesForCandidate(candidate) {
     learnedActivityDiscovery: true,
     searchTerm: candidate.name,
     searchTerms,
+    aliases: candidate.aliases || [],
+    negativeTerms: candidate.negativeTerms || [],
+    sourceHints: candidate.sourceHints || [],
   }));
 }
 
@@ -161,6 +171,9 @@ function getActiveSources(searchQuery = "") {
       category: source.category || "festival",
       searchTerm: source.searchTerm || "",
       searchTerms: source.searchTerms || [],
+      aliases: source.aliases || [],
+      negativeTerms: source.negativeTerms || [],
+      sourceHints: source.sourceHints || [],
       learned: true,
     }));
   const searchableCandidates = learning.candidates
@@ -189,7 +202,8 @@ function getActiveSources(searchQuery = "") {
           learned: true,
           learnedSearch: true,
           searchTerm: candidate.name,
-          searchTerms: activityTermsFor(candidate.name),
+          searchTerms: candidateActivityTerms(candidate),
+          negativeTerms: candidate.negativeTerms || [],
         },
         {
           name: `Learned Eventbrite search: ${candidate.name}`,
@@ -199,7 +213,8 @@ function getActiveSources(searchQuery = "") {
           learned: true,
           learnedSearch: true,
           searchTerm: candidate.name,
-          searchTerms: activityTermsFor(candidate.name),
+          searchTerms: candidateActivityTerms(candidate),
+          negativeTerms: candidate.negativeTerms || [],
         },
       ];
       if (isActivitySearchPrompt(candidate.name, category)) {
@@ -212,7 +227,8 @@ function getActiveSources(searchQuery = "") {
             learned: true,
             learnedSearch: true,
             searchTerm: candidate.name,
-            searchTerms: activityTermsFor(candidate.name),
+            searchTerms: candidateActivityTerms(candidate),
+            negativeTerms: candidate.negativeTerms || [],
           },
           {
             name: `Learned Meetup search: ${candidate.name}`,
@@ -222,7 +238,8 @@ function getActiveSources(searchQuery = "") {
             learned: true,
             learnedSearch: true,
             searchTerm: candidate.name,
-            searchTerms: activityTermsFor(candidate.name),
+            searchTerms: candidateActivityTerms(candidate),
+            negativeTerms: candidate.negativeTerms || [],
           }
         );
       }
@@ -386,6 +403,116 @@ function categorySearchTerms(category) {
     family: "family OR kids OR children",
   };
   return terms[category] || "event OR gig OR festival";
+}
+
+function normalizePlannerCategory(value, fallback = "festival") {
+  const category = normalizeSearchText(value);
+  const allowed = new Set(["food", "festival", "music", "trad", "sport", "rugby", "gaa", "arts", "family", "agriculture", "markets"]);
+  return allowed.has(category) ? category : fallback;
+}
+
+function dedupeStrings(values, limit = 12) {
+  return [...new Set((values || []).map(cleanText).filter(Boolean))].slice(0, limit);
+}
+
+function fallbackSuggestionPlan(value, area = "county") {
+  const activity = cleanText(value);
+  const category = inferCategory(activity, "festival", "User suggestion");
+  return {
+    activity,
+    category,
+    aliases: activityTermsFor(activity).filter((term) => term !== normalizeSearchText(activity)),
+    positiveQueries: activityDiscoveryQueries({ name: activity, category, area }).slice(0, 12),
+    negativeTerms: category === "sport" && /soccer|football/i.test(activity) ? ["gaa", "gaelic football", "hurling", "rugby"] : [],
+    sourceHints: [],
+    likelySourceTypes: category === "sport" ? ["club website", "fixture page", "league calendar"] : ["event listing", "venue page"],
+    planner: "fallback",
+  };
+}
+
+function plannerSchema() {
+  return {
+    type: "object",
+    additionalProperties: false,
+    required: ["activity", "category", "aliases", "positiveQueries", "negativeTerms", "sourceHints", "likelySourceTypes"],
+    properties: {
+      activity: { type: "string" },
+      category: { type: "string", enum: ["food", "festival", "music", "trad", "sport", "rugby", "gaa", "arts", "family", "agriculture", "markets"] },
+      aliases: { type: "array", items: { type: "string" }, maxItems: 12 },
+      positiveQueries: { type: "array", items: { type: "string" }, maxItems: 16 },
+      negativeTerms: { type: "array", items: { type: "string" }, maxItems: 12 },
+      sourceHints: { type: "array", items: { type: "string" }, maxItems: 12 },
+      likelySourceTypes: { type: "array", items: { type: "string" }, maxItems: 8 },
+    },
+  };
+}
+
+function extractResponseText(payload) {
+  if (payload.output_text) return payload.output_text;
+  const texts = [];
+  (payload.output || []).forEach((item) => {
+    (item.content || []).forEach((content) => {
+      if (content.text) texts.push(content.text);
+    });
+  });
+  return texts.join("\n");
+}
+
+async function callOpenAiPlanner(value, area) {
+  if (!OPENAI_API_KEY) return null;
+  const response = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${OPENAI_API_KEY}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: OPENAI_MODEL,
+      input: [
+        {
+          role: "system",
+          content:
+            "You plan Cork event-source discovery. Return JSON only. Interpret the user suggestion as an activity, venue, event type, or source. Prefer Cork, West Cork, Cork City, Cork County, and Munster sources. For activities, include aliases, negative terms to avoid false positives, and search queries that can find club, venue, fixture, calendar, event, or listings pages.",
+        },
+        {
+          role: "user",
+          content: `Suggestion: ${value}\nArea: ${area || "all Cork"}\nReturn a source discovery plan for the Cork Event Radar app.`,
+        },
+      ],
+      text: {
+        format: {
+          type: "json_schema",
+          name: "source_discovery_plan",
+          strict: true,
+          schema: plannerSchema(),
+        },
+      },
+    }),
+  });
+  if (!response.ok) throw new Error(`OpenAI planner failed: ${response.status}`);
+  const payload = await response.json();
+  return JSON.parse(extractResponseText(payload));
+}
+
+async function planSuggestion(value, area) {
+  const fallback = fallbackSuggestionPlan(value, area);
+  try {
+    const plan = await callOpenAiPlanner(value, area);
+    if (!plan) return fallback;
+    const category = normalizePlannerCategory(plan.category, fallback.category);
+    return {
+      activity: cleanText(plan.activity || fallback.activity),
+      category,
+      aliases: dedupeStrings(plan.aliases, 12),
+      positiveQueries: dedupeStrings(plan.positiveQueries, 16),
+      negativeTerms: dedupeStrings(plan.negativeTerms, 12),
+      sourceHints: dedupeStrings(plan.sourceHints, 12),
+      likelySourceTypes: dedupeStrings(plan.likelySourceTypes, 8),
+      planner: "openai",
+    };
+  } catch (error) {
+    return { ...fallback, planner: "fallback", plannerError: error.message };
+  }
 }
 
 function isActivitySearchPrompt(value, category) {
@@ -759,7 +886,7 @@ function learnedSearchTermMatches(event, source) {
   if (!source.learnedSearch || !source.searchTerm) return true;
   const terms = source.searchTerms?.length ? source.searchTerms : activityTermsFor(source.searchTerm);
   const haystack = normalizeSearchText([event.title, event.summary, event.location, event.url, ...(event.tags || [])].join(" "));
-  if (isNegativeActivityMatch(haystack, source.searchTerm)) return false;
+  if (isNegativeActivityMatch(haystack, source)) return false;
   return terms.some((term) => matchesTerm(haystack, term));
 }
 
@@ -773,12 +900,13 @@ function isRelevantDiscoveredSource(text, source) {
   const corkSignal = /\b(cork|munster|west cork|cork city|county cork)\b/i.test(haystack);
   const sourceSignal = /\b(fixtures?|results?|matches?|events?|club|league|calendar|whats on|what s on|tickets?)\b/i.test(haystack);
   const activitySignal = terms.some((term) => matchesTerm(haystack, term));
-  if (isNegativeActivityMatch(haystack, source.searchTerm)) return false;
+  if (isNegativeActivityMatch(haystack, source)) return false;
   return activitySignal && corkSignal && (sourceSignal || source.category === "sport");
 }
 
-function isNegativeActivityMatch(haystack, activity) {
-  const term = normalizeSearchText(activity);
+function isNegativeActivityMatch(haystack, source) {
+  if ((source.negativeTerms || []).some((term) => matchesTerm(haystack, term))) return true;
+  const term = normalizeSearchText(source.searchTerm || source);
   if (term === "soccer" || term === "football") {
     return /\b(gaa|gaelic|hurling|camogie|rugby|american football)\b/i.test(haystack);
   }
@@ -880,6 +1008,9 @@ async function fetchDiscoverySource(source) {
                   category: source.category,
                   searchTerm: source.searchTerm,
                   searchTerms: source.searchTerms || activityTermsFor(source.searchTerm),
+                  aliases: source.aliases || [],
+                  negativeTerms: source.negativeTerms || [],
+                  sourceHints: source.sourceHints || [],
                   evidenceTitle: events[0]?.title || `${source.searchTerm} source discovered from search`,
                 }
               : null,
@@ -1303,7 +1434,12 @@ function mergeCandidate(learning, candidate) {
     existing.status = existing.status || "candidate";
     existing.area = candidate.area || existing.area || "county";
     existing.category = candidate.category || existing.category || "festival";
-    existing.suggestedQueries = candidateQueries(existing.name, existing.category);
+    existing.aliases = dedupeStrings([...(existing.aliases || []), ...(candidate.aliases || [])], 12);
+    existing.negativeTerms = dedupeStrings([...(existing.negativeTerms || []), ...(candidate.negativeTerms || [])], 12);
+    existing.sourceHints = dedupeStrings([...(existing.sourceHints || []), ...(candidate.sourceHints || [])], 12);
+    existing.likelySourceTypes = dedupeStrings([...(existing.likelySourceTypes || []), ...(candidate.likelySourceTypes || [])], 8);
+    existing.planner = candidate.planner || existing.planner || "fallback";
+    existing.suggestedQueries = dedupeStrings([...(candidate.suggestedQueries || []), ...(candidate.positiveQueries || []), ...candidateQueries(existing.name, existing.category)], 16);
     existing.evidence = [evidence, ...(existing.evidence || [])].slice(0, 5);
     return existing;
   }
@@ -1315,7 +1451,12 @@ function mergeCandidate(learning, candidate) {
     score: candidate.score || 6,
     evidenceCount: 1,
     evidence: [evidence],
-    suggestedQueries: candidateQueries(candidate.name, candidate.category || "festival"),
+    aliases: dedupeStrings(candidate.aliases || [], 12),
+    negativeTerms: dedupeStrings(candidate.negativeTerms || [], 12),
+    sourceHints: dedupeStrings(candidate.sourceHints || [], 12),
+    likelySourceTypes: dedupeStrings(candidate.likelySourceTypes || [], 8),
+    planner: candidate.planner || "fallback",
+    suggestedQueries: dedupeStrings([...(candidate.suggestedQueries || []), ...(candidate.positiveQueries || []), ...candidateQueries(candidate.name, candidate.category || "festival")], 16),
     discoveredAt: now,
     lastSeenAt: now,
     status: "candidate",
@@ -1335,6 +1476,9 @@ function mergeLearnedSource(learning, source, evidence) {
     existing.category = source.category || existing.category || "festival";
     existing.searchTerm = source.searchTerm || existing.searchTerm || "";
     existing.searchTerms = source.searchTerms || existing.searchTerms || [];
+    existing.aliases = source.aliases || existing.aliases || [];
+    existing.negativeTerms = source.negativeTerms || existing.negativeTerms || [];
+    existing.sourceHints = source.sourceHints || existing.sourceHints || [];
     existing.lastValidatedAt = now;
     existing.status = "active";
     existing.evidence = [evidence, ...(existing.evidence || [])].slice(0, 5);
@@ -1348,6 +1492,9 @@ function mergeLearnedSource(learning, source, evidence) {
     category: source.category || "festival",
     searchTerm: source.searchTerm || "",
     searchTerms: source.searchTerms || [],
+    aliases: source.aliases || [],
+    negativeTerms: source.negativeTerms || [],
+    sourceHints: source.sourceHints || [],
     status: "active",
     sourceType: "user-suggested",
     discoveredAt: now,
@@ -1374,6 +1521,9 @@ function learnFromScan(results) {
           category: source.category || "festival",
           searchTerm: source.searchTerm || "",
           searchTerms: source.searchTerms || [],
+          aliases: source.aliases || [],
+          negativeTerms: source.negativeTerms || [],
+          sourceHints: source.sourceHints || [],
         },
         {
           title: source.evidenceTitle || "Discovered from learned activity search",
@@ -1504,7 +1654,16 @@ async function handleSuggest(request, response) {
 
     const url = findSuggestionUrl(part);
     const name = suggestionName(part, url);
-    const category = inferCategory(part, "festival", "User suggestion");
+    const plan = await planSuggestion(part, normalizedArea);
+    const category = plan.category || inferCategory(part, "festival", "User suggestion");
+    const plannerFields = {
+      aliases: plan.aliases || [],
+      negativeTerms: plan.negativeTerms || [],
+      sourceHints: plan.sourceHints || [],
+      likelySourceTypes: plan.likelySourceTypes || [],
+      positiveQueries: plan.positiveQueries || [],
+      planner: plan.planner || "fallback",
+    };
 
     if (url) {
       const source = {
@@ -1512,6 +1671,11 @@ async function handleSuggest(request, response) {
         url,
         area: normalizedArea,
         category,
+        searchTerm: plan.activity || name,
+        searchTerms: activityTermsFor(plan.activity || name, plan.aliases || []),
+        aliases: plan.aliases || [],
+        negativeTerms: plan.negativeTerms || [],
+        sourceHints: plan.sourceHints || [],
         learned: true,
       };
       const validation = await testSuggestedSource(source);
@@ -1536,6 +1700,7 @@ async function handleSuggest(request, response) {
           name,
           area: normalizedArea,
           category,
+          ...plannerFields,
           score: test.ok ? 5 : 4,
           url: learnedSource.url,
           evidenceTitle: test.ok
@@ -1561,6 +1726,7 @@ async function handleSuggest(request, response) {
         name,
         area: normalizedArea,
         category,
+        ...plannerFields,
         score: 8 + Math.min(6, test.events.length),
         url: learnedSource.url,
         evidenceTitle: `${test.events.length} event record(s) found during validation`,
@@ -1581,8 +1747,9 @@ async function handleSuggest(request, response) {
       name,
       area: normalizedArea,
       category,
+      ...plannerFields,
       score: 7,
-      evidenceTitle: "User suggested venue/event search requisite",
+      evidenceTitle: plan.planner === "openai" ? "LLM planned activity/source discovery" : "User suggested venue/event search requisite",
     });
     accepted.push({ name: candidate.name, category: candidate.category, status: "candidate" });
   }
