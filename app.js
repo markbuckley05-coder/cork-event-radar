@@ -414,7 +414,7 @@ function renderEvents(events) {
 
     const link = node.querySelector(".event-link");
     link.href = event.url || "https://www.purecork.ie/whats-on";
-    link.textContent = event.url ? "Open source" : "Open Pure Cork";
+    link.textContent = "Click here to open link";
     eventList.append(node);
   });
 }
