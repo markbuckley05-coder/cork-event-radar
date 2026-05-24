@@ -122,6 +122,7 @@ function getActiveSources() {
           kind: "reddit",
           learned: true,
           learnedSearch: true,
+          searchTerm: candidate.name,
         },
         {
           name: `Learned Eventbrite search: ${candidate.name}`,
@@ -130,6 +131,7 @@ function getActiveSources() {
           category,
           learned: true,
           learnedSearch: true,
+          searchTerm: candidate.name,
         },
       ];
       if (isActivitySearchPrompt(candidate.name, category)) {
@@ -141,6 +143,7 @@ function getActiveSources() {
             category,
             learned: true,
             learnedSearch: true,
+            searchTerm: candidate.name,
           },
           {
             name: `Learned Meetup search: ${candidate.name}`,
@@ -149,6 +152,7 @@ function getActiveSources() {
             category,
             learned: true,
             learnedSearch: true,
+            searchTerm: candidate.name,
           }
         );
       }
@@ -626,6 +630,17 @@ function extractKnownTextEvents(html, source) {
   return events;
 }
 
+function learnedSearchTermMatches(event, source) {
+  if (!source.learnedSearch || !source.searchTerm) return true;
+  const term = normalizeSearchText(source.searchTerm);
+  const haystack = normalizeSearchText([event.title, event.summary, event.location, event.url, ...(event.tags || [])].join(" "));
+  return containsTerm(haystack, term);
+}
+
+function filterLearnedSearchEvents(events, source) {
+  return events.filter((event) => learnedSearchTermMatches(event, source));
+}
+
 async function fetchRedditSource(source) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 9000);
@@ -663,7 +678,7 @@ async function fetchRedditSource(source) {
           confidence: "Community post",
         };
       });
-    return { source: source.name, ok: true, events };
+    return { source: source.name, ok: true, events: filterLearnedSearchEvents(events, source) };
   } catch (error) {
     return { source: source.name, ok: false, error: error.message, events: [] };
   } finally {
@@ -689,7 +704,7 @@ async function fetchSource(source) {
     const structured = extractJsonLdEvents(html, source);
     const knownText = extractKnownTextEvents(html, source);
     const heuristic = structured.length ? [] : extractHeuristicEvents(html, source);
-    return { source: source.name, ok: true, events: [...knownText, ...structured, ...heuristic] };
+    return { source: source.name, ok: true, events: filterLearnedSearchEvents([...knownText, ...structured, ...heuristic], source) };
   } catch (error) {
     return { source: source.name, ok: false, error: error.message, events: [] };
   } finally {

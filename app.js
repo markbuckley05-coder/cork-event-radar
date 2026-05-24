@@ -513,7 +513,7 @@ async function scanSources() {
     const payload = await response.json();
     const liveEvents = Array.isArray(payload.events) ? payload.events : [];
     state.learning = payload.learning || state.learning;
-    const merged = [...liveEvents, ...starterEvents];
+    const merged = liveEvents.length ? liveEvents : starterEvents;
     const byKey = new Map();
     merged.forEach((event) => {
       const key = `${event.title}|${event.startDate}|${event.location}`.toLowerCase();
