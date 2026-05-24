@@ -227,6 +227,25 @@ function escapeHtml(value) {
   });
 }
 
+function cleanSummary(value) {
+  return String(value || "")
+    .replace(/\*\*/g, "")
+    .replace(/#+\s*/g, "")
+    .replace(/\[[^\]]+\]\([^)]+\)/g, "")
+    .replace(/https?:\/\/\S+/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function previewSummary(value, maxLength = 260) {
+  const clean = cleanSummary(value);
+  if (clean.length <= maxLength) return clean;
+  const sentences = clean.match(/[^.!?]+[.!?]+/g) || [];
+  const preview = sentences.slice(0, 2).join(" ").trim();
+  if (preview && preview.length <= maxLength) return preview;
+  return `${clean.slice(0, maxLength).replace(/\s+\S*$/, "")}...`;
+}
+
 function normalizeSearchText(value) {
   return String(value || "")
     .toLowerCase()
@@ -379,7 +398,7 @@ function renderEvents(events) {
     node.querySelector(".meta").textContent = `${date.full} - ${event.location || "Location TBC"}`;
     node.querySelector("h3").textContent = event.title;
     node.querySelector(".source-badge").textContent = event.source || "Source";
-    node.querySelector(".summary").textContent = event.summary || "Open the source for the latest details.";
+    node.querySelector(".summary").textContent = previewSummary(event.summary || "Open the source for the latest details.");
     node.querySelector(".location").textContent = event.location || "Location TBC";
     node.querySelector(".time").textContent = event.endDate ? `Until ${formatDateParts(event.endDate).full}` : "Time TBC";
     node.querySelector(".confidence").textContent = event.confidence || "Scraped";

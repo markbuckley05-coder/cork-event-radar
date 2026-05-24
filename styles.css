@@ -530,6 +530,7 @@ main {
   margin: 0;
   color: #334452;
   line-height: 1.52;
+  max-width: 92ch;
 }
 
 .event-facts span {
