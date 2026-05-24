@@ -189,6 +189,7 @@ function getActiveSources(searchQuery = "") {
       localityTerms: source.localityTerms || [],
       planner: source.planner || "",
       learned: true,
+      learnedSearch: Boolean(source.searchTerm),
     }));
   const searchableCandidates = learning.candidates
     .filter((candidate) => candidate.status !== "ignored" && candidate.score >= 4 && isUsefulVenueName(candidate.name))
@@ -949,20 +950,23 @@ function isSportFixtureSource(source) {
   return source.category === "sport" && Boolean(source.searchTerm);
 }
 
+function hasCorkClubSignal(text) {
+  return /\b(cork|mardyke|farmers cross|farmer's cross|midleton|harlequins|cobh|ramblers|ucc|mtu)\b/i.test(text);
+}
+
 function extractSportFixtures(html, source) {
   if (!isSportFixtureSource(source)) return [];
   const text = cleanText(html);
   const events = [];
   const fixturePattern =
     /\b([A-Z][A-Za-z0-9 '&.-]{2,70}?)\s+(MCU\s+.{3,80}?)\s+Opponent\s+(.{3,80}?)\s+Venue\s+(.{3,90}?)\s+(\d{1,2}\/\d{1,2}\/\d{2,4})\s+(\d{1,2}[.:]\d{2}\s*(?:am|pm))/gi;
-  const corkSignal = /\b(cork|mardyke|farmers cross|farmer's cross|midleton|harlequins)\b/i;
   const seen = new Set();
   let match;
 
   while ((match = fixturePattern.exec(text)) && events.length < 40) {
     const [, team, competition, opponent, venue, date, time] = match.map(cleanText);
     const fixtureText = `${team} ${competition} ${opponent} ${venue}`;
-    if (!corkSignal.test(fixtureText)) continue;
+    if (!hasCorkClubSignal(fixtureText)) continue;
 
     const normalizedDate = normalizeDate(date);
     const title = `${team} v ${opponent}`;
@@ -986,6 +990,91 @@ function extractSportFixtures(html, source) {
   }
 
   return events;
+}
+
+function extractTableFixtureEvents(html, source) {
+  if (source.category !== "sport") return [];
+  const events = [];
+  const seen = new Set();
+  const rowRegex = /<tr[\s\S]*?<\/tr>/gi;
+  const datePattern =
+    /\b(\d{4}-\d{2}-\d{2}|\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{1,2}\s+(?:jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|sept|september|oct|october|nov|november|dec|december)[a-z]*\s+\d{4})\b/i;
+  let match;
+
+  while ((match = rowRegex.exec(html)) && events.length < 40) {
+    const row = match[0]
+      .replace(/<\/t[dh]>/gi, " | ")
+      .replace(/<br\s*\/?>/gi, " | ");
+    const text = cleanText(row)
+      .replace(/\s*\|\s*/g, " | ")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!/\b(v|vs|versus)\b/i.test(text)) continue;
+
+    const dateMatch = text.match(datePattern);
+    const startDate = normalizeDate(dateMatch?.[0]);
+    if (!startDate) continue;
+
+    const parts = text.split("|").map((part) => cleanText(part)).filter(Boolean);
+    const standaloneVIndex = parts.findIndex((part) => /^(v|vs|versus)$/i.test(part));
+    const fixtureIndex = standaloneVIndex > 0 && parts[standaloneVIndex + 1]
+      ? standaloneVIndex - 1
+      : parts.findIndex((part) => /\b(v|vs|versus)\b/i.test(part));
+    const fixturePart = standaloneVIndex > 0 && parts[standaloneVIndex + 1]
+      ? `${parts[standaloneVIndex - 1]} v ${parts[standaloneVIndex + 1]}`
+      : parts[fixtureIndex] || text;
+    if (/view all events|more results|fixtures & results/i.test(fixturePart)) continue;
+
+    const timePart = parts.find((part) => /\b\d{1,2}[:.]\d{2}\b/.test(part)) || "";
+    const competition = parts.find((part) => part !== fixturePart && part !== dateMatch[0] && part !== timePart && !normalizeDate(part)) || "";
+    const locationPart = standaloneVIndex > 0 && parts[standaloneVIndex + 2]
+      ? parts[standaloneVIndex + 2]
+      : parts[fixtureIndex + 1] || "";
+    const location = locationPart && !/\b(view|scorecard|report|result)\b/i.test(locationPart) ? locationPart : "County Cork";
+    const title = fixturePart.replace(/\s+/g, " ").trim();
+    if (!hasCorkClubSignal(`${title} ${location}`)) continue;
+    const key = normalizeSearchText(`${title} ${startDate} ${location}`);
+    if (!title || seen.has(key)) continue;
+    seen.add(key);
+
+    const area = inferArea(`${title} ${location}`, source.area);
+    events.push({
+      title,
+      summary: `${competition ? `${competition}. ` : ""}${cleanText(source.searchTerm || "Sport")} fixture${timePart ? ` at ${timePart}` : ""}. Open the source to confirm venue and match status.`,
+      startDate,
+      location,
+      area,
+      category: "sport",
+      tags: ["sport", source.searchTerm, area, "fixtures"].filter(Boolean),
+      source: source.name,
+      url: source.url,
+      confidence: "Fixture table",
+    });
+  }
+
+  return events;
+}
+
+async function fetchLinkedFixtureEvents(html, source) {
+  if (source.category !== "sport") return [];
+  const links = extractFixturePageLinks(html, source.url).slice(0, 6);
+  if (!links.length) return [];
+
+  const results = await Promise.all(
+    links.map(async (url) => {
+      try {
+        const linkedHtml = await fetchHtml(url);
+        return [
+          ...extractSportFixtures(linkedHtml, { ...source, url }),
+          ...extractTableFixtureEvents(linkedHtml, { ...source, url }),
+        ];
+      } catch {
+        return [];
+      }
+    })
+  );
+
+  return dedupe(results.flat());
 }
 
 function extractKnownTextEvents(html, source) {
@@ -1121,6 +1210,29 @@ function extractDiscoveryLinks(html, baseUrl) {
   return links;
 }
 
+function extractFixturePageLinks(html, baseUrl) {
+  const links = [];
+  const seen = new Set();
+  const linkRegex = /<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  let match;
+
+  while ((match = linkRegex.exec(html)) && links.length < 8) {
+    const href = match[1].replace(/&amp;/g, "&");
+    const label = cleanText(match[2]);
+    if (!/fixture|match centre|match-center|matches|calendar/i.test(`${href} ${label}`)) continue;
+    try {
+      const url = new URL(href, baseUrl).toString();
+      if (seen.has(url)) continue;
+      seen.add(url);
+      links.push(url);
+    } catch {
+      // Ignore malformed fixture links.
+    }
+  }
+
+  return links;
+}
+
 async function fetchHtml(url, accept = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8") {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 9000);
@@ -1167,10 +1279,12 @@ async function inspectDiscoveredUrl(source, found) {
     const pageText = cleanText(html).slice(0, 8000);
     const relevantSource = isRelevantDiscoveredSource(pageText, discovered);
     const sportFixtures = extractSportFixtures(html, discovered);
+    const tableFixtures = extractTableFixtureEvents(html, discovered);
+    const linkedFixtures = await fetchLinkedFixtureEvents(html, discovered);
     const structured = extractJsonLdEvents(html, discovered);
     const knownText = extractKnownTextEvents(html, discovered);
     const heuristic = structured.length ? [] : extractHeuristicEvents(html, discovered);
-    const events = filterLearnedSearchEvents([...sportFixtures, ...knownText, ...structured, ...heuristic], discovered);
+    const events = filterLearnedSearchEvents([...sportFixtures, ...tableFixtures, ...linkedFixtures, ...knownText, ...structured, ...heuristic], discovered);
     return {
       events,
       source: relevantSource || events.length
@@ -1286,10 +1400,12 @@ async function fetchSource(source) {
   try {
     const html = await fetchHtml(source.url);
     const sportFixtures = extractSportFixtures(html, source);
+    const tableFixtures = extractTableFixtureEvents(html, source);
+    const linkedFixtures = await fetchLinkedFixtureEvents(html, source);
     const structured = extractJsonLdEvents(html, source);
     const knownText = extractKnownTextEvents(html, source);
     const heuristic = structured.length ? [] : extractHeuristicEvents(html, source);
-    return { source: source.name, ok: true, events: filterLearnedSearchEvents([...sportFixtures, ...knownText, ...structured, ...heuristic], source) };
+    return { source: source.name, ok: true, events: filterLearnedSearchEvents([...sportFixtures, ...tableFixtures, ...linkedFixtures, ...knownText, ...structured, ...heuristic], source) };
   } catch (error) {
     return { source: source.name, ok: false, error: error.message, events: [] };
   }
