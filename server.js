@@ -131,7 +131,8 @@ function activityDiscoveryQueries(candidate) {
 function activityDiscoverySourcesForCandidate(candidate) {
   if (!isActivitySearchPrompt(candidate.name, candidate.category) && !(candidate.positiveQueries || candidate.suggestedQueries || []).length) return [];
   const searchTerms = candidateActivityTerms(candidate);
-  return activityDiscoveryQueries(candidate).slice(0, 12).map((query) => ({
+  const queryLimit = candidate.planner === "openai" ? 4 : 8;
+  return activityDiscoveryQueries(candidate).slice(0, queryLimit).map((query) => ({
     name: `Activity discovery: ${query}`,
     url: `https://duckduckgo.com/html/?q=${encodeURIComponent(query)}`,
     area: candidate.area || "county",
@@ -140,14 +141,17 @@ function activityDiscoverySourcesForCandidate(candidate) {
     learned: true,
     learnedActivityDiscovery: true,
     searchTerm: candidate.name,
+    searchQuery: query,
     searchTerms,
     aliases: candidate.aliases || [],
     negativeTerms: candidate.negativeTerms || [],
     sourceHints: candidate.sourceHints || [],
+    likelySourceTypes: candidate.likelySourceTypes || [],
     validationSignals: candidate.validationSignals || [],
     rejectionSignals: candidate.rejectionSignals || [],
     sourceTypes: candidate.sourceTypes || [],
     localityTerms: candidate.localityTerms || [],
+    planner: candidate.planner || "",
   }));
 }
 
@@ -178,10 +182,12 @@ function getActiveSources(searchQuery = "") {
       aliases: source.aliases || [],
       negativeTerms: source.negativeTerms || [],
       sourceHints: source.sourceHints || [],
+      likelySourceTypes: source.likelySourceTypes || [],
       validationSignals: source.validationSignals || [],
       rejectionSignals: source.rejectionSignals || [],
       sourceTypes: source.sourceTypes || [],
       localityTerms: source.localityTerms || [],
+      planner: source.planner || "",
       learned: true,
     }));
   const searchableCandidates = learning.candidates
@@ -190,8 +196,15 @@ function getActiveSources(searchQuery = "") {
   const priorityCandidates = searchableCandidates.filter(
     (candidate) => isActivitySearchPrompt(candidate.name, candidate.category) || candidate.evidence?.some((item) => item.source === "User suggestion")
   );
+  const normalizedQuery = normalizeSearchText(searchQuery);
+  const queryFocusedCandidates = normalizedQuery
+    ? priorityCandidates.filter((candidate) => {
+        const terms = candidateActivityTerms(candidate);
+        return matchesTerm(candidate.name, normalizedQuery) || terms.some((term) => matchesTerm(term, normalizedQuery) || matchesTerm(normalizedQuery, term));
+      })
+    : priorityCandidates;
   const queryCandidate = activityCandidateFromQuery(searchQuery);
-  const activeCandidates = [queryCandidate, ...priorityCandidates, ...searchableCandidates]
+  const activeCandidates = [queryCandidate, ...queryFocusedCandidates, ...(normalizedQuery ? [] : searchableCandidates)]
     .filter(Boolean)
     .filter((candidate, index, list) => list.findIndex((item) => normalizeSearchText(item.name) === normalizeSearchText(candidate.name)) === index)
     .slice(0, 16);
@@ -482,6 +495,32 @@ function plannerSchema() {
   };
 }
 
+function sourceSearchSchema() {
+  return {
+    type: "object",
+    additionalProperties: false,
+    required: ["sources"],
+    properties: {
+      sources: {
+        type: "array",
+        maxItems: 8,
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: ["name", "url", "reason", "sourceType", "confidence"],
+          properties: {
+            name: { type: "string" },
+            url: { type: "string" },
+            reason: { type: "string" },
+            sourceType: { type: "string" },
+            confidence: { type: "string", enum: ["low", "medium", "high"] },
+          },
+        },
+      },
+    },
+  };
+}
+
 function extractResponseText(payload) {
   if (payload.output_text) return payload.output_text;
   const texts = [];
@@ -527,6 +566,70 @@ async function callOpenAiPlanner(value, area) {
   if (!response.ok) throw new Error(`OpenAI planner failed: ${response.status}`);
   const payload = await response.json();
   return JSON.parse(extractResponseText(payload));
+}
+
+async function callOpenAiSourceSearch(source) {
+  if (!OPENAI_API_KEY) return [];
+  const response = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${OPENAI_API_KEY}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: OPENAI_MODEL,
+      tools: [
+        {
+          type: "web_search_preview",
+          search_context_size: "low",
+          user_location: {
+            type: "approximate",
+            country: "IE",
+            region: "Cork",
+            city: "Cork",
+            timezone: "Europe/Dublin",
+          },
+        },
+      ],
+      input: [
+        {
+          role: "system",
+          content:
+            "Find durable source pages for a Cork local event scraper. Return official club, association, venue, fixture, results, calendar, listings, programme, or ticket pages that can be revisited. Prefer pages with dated future events or recurring fixture calendars. Avoid one-off news articles, generic directories, unrelated locations, and pages without event/listing evidence. Return only JSON matching the schema.",
+        },
+        {
+          role: "user",
+          content: [
+            `Activity or topic: ${source.searchTerm}`,
+            `Category: ${source.category}`,
+            `Area: ${source.area || "County Cork"}`,
+            `Search query: ${source.searchQuery || source.name}`,
+            `Aliases: ${(source.aliases || []).join(", ") || "none"}`,
+            `Likely source types: ${(source.sourceTypes || source.likelySourceTypes || []).join(", ") || "none"}`,
+            `Validation signals: ${(source.validationSignals || []).join(", ") || "dated events, fixtures, results, calendar"}`,
+            `Rejection signals: ${(source.rejectionSignals || source.negativeTerms || []).join(", ") || "unrelated location, no dates, generic article"}`,
+          ].join("\n"),
+        },
+      ],
+      text: {
+        format: {
+          type: "json_schema",
+          name: "source_search_results",
+          strict: true,
+          schema: sourceSearchSchema(),
+        },
+      },
+    }),
+  });
+  if (!response.ok) throw new Error(`OpenAI source search failed: ${response.status}`);
+  const payload = await response.json();
+  const parsed = JSON.parse(extractResponseText(payload));
+  return (parsed.sources || [])
+    .map((item) => ({
+      ...item,
+      url: absolutize(item.url, item.url),
+    }))
+    .filter((item) => /^https?:\/\//i.test(item.url));
 }
 
 async function planSuggestion(value, area) {
@@ -927,7 +1030,15 @@ function learnedSearchTermMatches(event, source) {
   const terms = source.searchTerms?.length ? source.searchTerms : activityTermsFor(source.searchTerm);
   const haystack = normalizeSearchText([event.title, event.summary, event.location, event.url, ...(event.tags || [])].join(" "));
   if (isNegativeActivityMatch(haystack, source)) return false;
-  return terms.some((term) => matchesTerm(haystack, term));
+  const termMatch = terms.some((term) => matchesTerm(haystack, term));
+  if (!termMatch) return false;
+  if (source.category === "sport" && isActivitySearchPrompt(source.searchTerm, source.category)) {
+    const localityTerms = source.localityTerms?.length ? source.localityTerms : ["cork", "west cork", "cork city", "county cork"];
+    const location = normalizeSearchText(event.location) === "county cork" ? "" : event.location;
+    const eventText = normalizeSearchText([event.title, location].join(" "));
+    return localityTerms.some((term) => matchesTerm(eventText, term));
+  }
+  return true;
 }
 
 function filterLearnedSearchEvents(events, source) {
@@ -1018,72 +1129,110 @@ async function fetchHtml(url, accept = "text/html,application/xhtml+xml,applicat
   }
 }
 
-async function fetchDiscoverySource(source) {
+function discoverySourceFields(source, url) {
+  return {
+    name: `${source.searchTerm} discovered source`,
+    url,
+    area: source.area,
+    category: source.category,
+    learnedSearch: true,
+    searchTerm: source.searchTerm,
+    searchTerms: source.searchTerms || activityTermsFor(source.searchTerm),
+    aliases: source.aliases || [],
+    negativeTerms: source.negativeTerms || [],
+    sourceHints: source.sourceHints || [],
+    likelySourceTypes: source.likelySourceTypes || [],
+    validationSignals: source.validationSignals || [],
+    rejectionSignals: source.rejectionSignals || [],
+    sourceTypes: source.sourceTypes || [],
+    localityTerms: source.localityTerms || [],
+  };
+}
+
+async function inspectDiscoveredUrl(source, found) {
+  const url = typeof found === "string" ? found : found.url;
+  const discovered = discoverySourceFields(source, url);
   try {
-    const searchHtml = await fetchHtml(source.url);
-    const links = extractDiscoveryLinks(searchHtml, source.url).slice(0, 8);
-    const results = await Promise.all(
-      links.map(async (url) => {
-        const discovered = {
-          name: `${source.searchTerm} discovered source`,
-          url,
-          area: source.area,
-          category: source.category,
-          learnedSearch: true,
-          searchTerm: source.searchTerm,
-          searchTerms: source.searchTerms || activityTermsFor(source.searchTerm),
-          aliases: source.aliases || [],
-          negativeTerms: source.negativeTerms || [],
-          sourceHints: source.sourceHints || [],
-          validationSignals: source.validationSignals || [],
-          rejectionSignals: source.rejectionSignals || [],
-          sourceTypes: source.sourceTypes || [],
-          localityTerms: source.localityTerms || [],
-        };
-        try {
-          const html = await fetchHtml(url);
-          const pageText = cleanText(html).slice(0, 8000);
-          const relevantSource = isRelevantDiscoveredSource(pageText, discovered);
-          const sportFixtures = extractSportFixtures(html, discovered);
-          const structured = extractJsonLdEvents(html, discovered);
-          const knownText = extractKnownTextEvents(html, discovered);
-          const heuristic = structured.length ? [] : extractHeuristicEvents(html, discovered);
-          const events = filterLearnedSearchEvents([...sportFixtures, ...knownText, ...structured, ...heuristic], discovered);
-          return {
-            events,
-            source: relevantSource || events.length
-              ? {
-                  name: sourceNameFromPage(url, pageText, source.searchTerm),
-                  url,
-                  area: inferArea(pageText, source.area),
-                  category: source.category,
-                  searchTerm: source.searchTerm,
-                  searchTerms: source.searchTerms || activityTermsFor(source.searchTerm),
-                  aliases: source.aliases || [],
-                  negativeTerms: source.negativeTerms || [],
-                  sourceHints: source.sourceHints || [],
-                  validationSignals: source.validationSignals || [],
-                  rejectionSignals: source.rejectionSignals || [],
-                  sourceTypes: source.sourceTypes || [],
-                  localityTerms: source.localityTerms || [],
-                  evidenceTitle: events[0]?.title || `${source.searchTerm} source discovered from search`,
-                }
-              : null,
-          };
-        } catch {
-          return { events: [], source: null };
-        }
-      })
-    );
+    const html = await fetchHtml(url);
+    const pageText = cleanText(html).slice(0, 8000);
+    const relevantSource = isRelevantDiscoveredSource(pageText, discovered);
+    const sportFixtures = extractSportFixtures(html, discovered);
+    const structured = extractJsonLdEvents(html, discovered);
+    const knownText = extractKnownTextEvents(html, discovered);
+    const heuristic = structured.length ? [] : extractHeuristicEvents(html, discovered);
+    const events = filterLearnedSearchEvents([...sportFixtures, ...knownText, ...structured, ...heuristic], discovered);
     return {
-      source: source.name,
-      ok: true,
-      events: dedupe(results.flatMap((result) => result.events)),
-      discoveredSources: results.map((result) => result.source).filter(Boolean),
+      events,
+      source: relevantSource || events.length
+        ? {
+            name: found.name || sourceNameFromPage(url, pageText, source.searchTerm),
+            url,
+            area: inferArea(pageText, source.area),
+            category: source.category,
+            searchTerm: source.searchTerm,
+            searchTerms: source.searchTerms || activityTermsFor(source.searchTerm),
+            aliases: source.aliases || [],
+            negativeTerms: source.negativeTerms || [],
+            sourceHints: source.sourceHints || [],
+            likelySourceTypes: source.likelySourceTypes || [],
+            validationSignals: source.validationSignals || [],
+            rejectionSignals: source.rejectionSignals || [],
+            sourceTypes: source.sourceTypes || [],
+            localityTerms: source.localityTerms || [],
+            planner: source.planner || "",
+            evidenceTitle: events[0]?.title || found.reason || `${source.searchTerm} source discovered from search`,
+          }
+        : null,
     };
-  } catch (error) {
-    return { source: source.name, ok: false, error: error.message, events: [] };
+  } catch {
+    return { events: [], source: null };
   }
+}
+
+async function discoveryLinksFromSearchPage(source) {
+  const searchHtml = await fetchHtml(source.url);
+  return extractDiscoveryLinks(searchHtml, source.url).slice(0, 8);
+}
+
+async function fetchDiscoverySource(source) {
+  const errors = [];
+  let foundSources = [];
+
+  try {
+    foundSources = (await discoveryLinksFromSearchPage(source)).map((url) => ({ url }));
+  } catch (error) {
+    errors.push(`search-page: ${error.message}`);
+  }
+
+  if ((!foundSources.length || source.planner === "openai") && OPENAI_API_KEY) {
+    try {
+      const openAiSources = await callOpenAiSourceSearch(source);
+      foundSources = [...foundSources, ...openAiSources];
+    } catch (error) {
+      errors.push(`openai-source-search: ${error.message}`);
+    }
+  }
+
+  if (!foundSources.length) {
+    return { source: source.name, ok: false, error: errors.join("; ") || "No discovery links found", events: [] };
+  }
+
+  const seen = new Set();
+  const uniqueSources = foundSources.filter((found) => {
+    const key = normalizeSearchText(found.url);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(0, 8);
+
+  const results = await Promise.all(uniqueSources.map((found) => inspectDiscoveredUrl(source, found)));
+  return {
+    source: source.name,
+    ok: true,
+    error: errors.join("; ") || undefined,
+    events: dedupe(results.flatMap((result) => result.events)),
+    discoveredSources: results.map((result) => result.source).filter(Boolean),
+  };
 }
 
 async function fetchRedditSource(source) {
@@ -1100,11 +1249,11 @@ async function fetchRedditSource(source) {
         const text = `${post.title} ${post.selftext || ""}`;
         const category = inferCategory(text, source.category, source.name);
         const area = inferArea(text, source.area);
-        const posted = post.created_utc ? new Date(post.created_utc * 1000).toISOString().slice(0, 10) : "";
+        const eventDate = normalizeDate(text);
         return {
           title: cleanText(post.title),
           summary: cleanText(post.selftext || "Reddit discussion that may mention a local event. Open the source to verify details.").slice(0, 240),
-          startDate: posted,
+          startDate: eventDate,
           location: area === "city" ? "Cork City / Reddit r/cork" : "County Cork / Reddit r/cork",
           area,
           category,
@@ -1151,7 +1300,7 @@ function eventMatchesArea(event, params) {
 function eventMatchesDate(event, params) {
   const from = params.get("from") || "";
   const to = params.get("to") || "";
-  if ((from || to) && !event.startDate) return false;
+  if (!event.startDate) return false;
   if (from && event.startDate < from) return false;
   if (to && event.startDate > to) return false;
   return true;
@@ -1235,15 +1384,7 @@ function nextDateForDay(day, offsetWeeks = 0) {
 function generatedMarketEvents() {
   return recurringMarkets.flatMap((market) => {
     if (market.day === null) {
-      return [
-        {
-          ...market,
-          startDate: new Date().toISOString().slice(0, 10),
-          category: "markets",
-          tags: tagsFor("markets", market.area, "food"),
-          confidence: "Recurring market source",
-        },
-      ];
+      return [];
     }
 
     return [0, 1, 2, 3].map((week) => ({
@@ -1352,6 +1493,23 @@ function topLearningSummary(learning) {
     candidateCount: learning.candidates.length,
     learnedSourceCount: learning.learnedSources.length,
     topCandidates: learning.candidates.slice(0, 8),
+    planner: {
+      openaiConfigured: Boolean(OPENAI_API_KEY),
+      model: OPENAI_MODEL,
+    },
+  };
+}
+
+function healthSummary() {
+  const learning = readLearningState();
+  return {
+    ok: true,
+    openaiConfigured: Boolean(OPENAI_API_KEY),
+    model: OPENAI_MODEL,
+    learnedSourceCount: learning.learnedSources.length,
+    candidateCount: learning.candidates.length,
+    updatedAt: learning.updatedAt || "",
+    now: new Date().toISOString(),
   };
 }
 
@@ -1544,10 +1702,12 @@ function mergeLearnedSource(learning, source, evidence) {
     existing.aliases = source.aliases || existing.aliases || [];
     existing.negativeTerms = source.negativeTerms || existing.negativeTerms || [];
     existing.sourceHints = source.sourceHints || existing.sourceHints || [];
+    existing.likelySourceTypes = source.likelySourceTypes || existing.likelySourceTypes || [];
     existing.validationSignals = source.validationSignals || existing.validationSignals || [];
     existing.rejectionSignals = source.rejectionSignals || existing.rejectionSignals || [];
     existing.sourceTypes = source.sourceTypes || existing.sourceTypes || [];
     existing.localityTerms = source.localityTerms || existing.localityTerms || [];
+    existing.planner = source.planner || existing.planner || "";
     existing.lastValidatedAt = now;
     existing.status = "active";
     existing.evidence = [evidence, ...(existing.evidence || [])].slice(0, 5);
@@ -1564,10 +1724,12 @@ function mergeLearnedSource(learning, source, evidence) {
     aliases: source.aliases || [],
     negativeTerms: source.negativeTerms || [],
     sourceHints: source.sourceHints || [],
+    likelySourceTypes: source.likelySourceTypes || [],
     validationSignals: source.validationSignals || [],
     rejectionSignals: source.rejectionSignals || [],
     sourceTypes: source.sourceTypes || [],
     localityTerms: source.localityTerms || [],
+    planner: source.planner || "",
     status: "active",
     sourceType: "user-suggested",
     discoveredAt: now,
@@ -1597,10 +1759,12 @@ function learnFromScan(results) {
           aliases: source.aliases || [],
           negativeTerms: source.negativeTerms || [],
           sourceHints: source.sourceHints || [],
+          likelySourceTypes: source.likelySourceTypes || [],
           validationSignals: source.validationSignals || [],
           rejectionSignals: source.rejectionSignals || [],
           sourceTypes: source.sourceTypes || [],
           localityTerms: source.localityTerms || [],
+          planner: source.planner || "",
         },
         {
           title: source.evidenceTitle || "Discovered from learned activity search",
@@ -1687,6 +1851,26 @@ async function handleApiEvents(request, response) {
   });
 }
 
+async function handleApiPlan(request, response) {
+  const url = new URL(request.url, `http://${request.headers.host}`);
+  const suggestion = cleanText(url.searchParams.get("suggestion") || "");
+  const requestedArea = url.searchParams.get("area") || "county";
+  const area = ["west-cork", "city", "county", "all"].includes(requestedArea) ? requestedArea : "county";
+
+  if (suggestion.length < 3) {
+    sendJson(response, 400, { ok: false, error: "Add a suggestion of at least 3 characters." });
+    return;
+  }
+
+  const plan = await planSuggestion(suggestion, area === "all" ? "county" : area);
+  sendJson(response, 200, {
+    ok: true,
+    openaiConfigured: Boolean(OPENAI_API_KEY),
+    model: OPENAI_MODEL,
+    plan,
+  });
+}
+
 async function handleSuggest(request, response) {
   const body = await readRequestJson(request);
   const suggestion = cleanText(body.suggestion || "");
@@ -1725,7 +1909,7 @@ async function handleSuggest(request, response) {
         url: canonical.url,
         evidenceTitle: `User suggested ${part}`,
       });
-      accepted.push({ name: candidate.name, category: candidate.category, status: "learned-source" });
+      accepted.push({ name: candidate.name, category: candidate.category, status: "learned-source", planner: "rule" });
       continue;
     }
 
@@ -1793,7 +1977,12 @@ async function handleSuggest(request, response) {
             ? "User suggested a fetchable URL without clear event markup"
             : "User suggested a URL retained for future scanning",
         });
-        accepted.push({ name: candidate.name, category: candidate.category, status: test.ok ? "learned-source" : "watchlist-source" });
+        accepted.push({
+          name: candidate.name,
+          category: candidate.category,
+          status: test.ok ? "learned-source" : "watchlist-source",
+          planner: plan.planner || "fallback",
+        });
         continue;
       }
 
@@ -1817,7 +2006,7 @@ async function handleSuggest(request, response) {
         url: learnedSource.url,
         evidenceTitle: `${test.events.length} event record(s) found during validation`,
       });
-      accepted.push({ name: candidate.name, category: candidate.category, status: "learned-source" });
+      accepted.push({ name: candidate.name, category: candidate.category, status: "learned-source", planner: plan.planner || "fallback" });
       continue;
     }
 
@@ -1837,7 +2026,7 @@ async function handleSuggest(request, response) {
       score: 7,
       evidenceTitle: plan.planner === "openai" ? "LLM planned activity/source discovery" : "User suggested venue/event search requisite",
     });
-    accepted.push({ name: candidate.name, category: candidate.category, status: "candidate" });
+    accepted.push({ name: candidate.name, category: candidate.category, status: "candidate", planner: plan.planner || "fallback" });
   }
 
   if (!accepted.length) {
@@ -1852,10 +2041,12 @@ async function handleSuggest(request, response) {
 
   const saved = writeLearningState(learning);
   const rejectedMessage = rejected.length ? ` ${rejected.length} item(s) need more detail.` : "";
+  const plannerUsed = accepted.find((item) => item.planner && item.planner !== "rule")?.planner || "";
+  const plannerMessage = plannerUsed ? ` Planner: ${plannerUsed === "openai" ? "OpenAI" : "fallback"}.` : "";
   sendJson(response, 200, {
     ok: true,
     status: accepted.some((item) => item.status === "learned-source") ? "learned-source" : "candidate",
-    message: `Accepted ${accepted.map((item) => `"${item.name}" as ${categoryLabel(item.category)}`).join(", ")}.${rejectedMessage}`,
+    message: `Accepted ${accepted.map((item) => `"${item.name}" as ${categoryLabel(item.category)}`).join(", ")}.${plannerMessage}${rejectedMessage}`,
     accepted,
     rejected,
     learning: topLearningSummary(saved),
@@ -1885,6 +2076,18 @@ function serveStatic(request, response) {
 }
 
 const server = http.createServer((request, response) => {
+  if (request.url.startsWith("/api/health")) {
+    sendJson(response, 200, healthSummary());
+    return;
+  }
+
+  if (request.url.startsWith("/api/plan")) {
+    handleApiPlan(request, response).catch((error) => {
+      sendJson(response, 500, { ok: false, error: error.message });
+    });
+    return;
+  }
+
   if (request.url.startsWith("/api/events")) {
     handleApiEvents(request, response).catch((error) => {
       sendJson(response, 500, { error: error.message });

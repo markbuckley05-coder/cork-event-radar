@@ -282,7 +282,7 @@ function matchesArea(event) {
 
 function matchesDate(event) {
   const start = event.startDate || "";
-  if ((state.from || state.to) && !start) return false;
+  if (!start) return false;
   if (state.from && start && start < state.from) return false;
   if (state.to && start && start > state.to) return false;
   return true;
@@ -356,7 +356,8 @@ function renderLearning() {
 
   candidates.forEach((candidate) => {
     const node = document.createElement("span");
-    node.innerHTML = `<strong>${escapeHtml(candidate.name)}</strong> score ${escapeHtml(candidate.score)} · ${escapeHtml(candidate.area || "county")}`;
+    const planner = candidate.planner ? ` · ${candidate.planner}` : "";
+    node.innerHTML = `<strong>${escapeHtml(candidate.name)}</strong> score ${escapeHtml(candidate.score)} · ${escapeHtml(candidate.area || "county")}${escapeHtml(planner)}`;
     learningCandidates.append(node);
   });
 }
