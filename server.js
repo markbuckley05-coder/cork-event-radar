@@ -818,7 +818,59 @@ function extractEventbriteListingEvents(html, source) {
     });
   }
 
+  extractEventbriteTextCardEvents(text, source, datePattern).forEach((event) => {
+    const key = normalizeSearchText(`${event.title} ${event.startDate} ${event.location}`);
+    if (seen.has(key)) return;
+    seen.add(key);
+    events.push(event);
+  });
+
   return events;
+}
+
+function extractEventbriteTextCardEvents(text, source, datePattern) {
+  const events = [];
+  const saveRegex = /Save this event:\s*/gi;
+  let match;
+
+  while ((match = saveRegex.exec(text)) && events.length < 30) {
+    const context = text.slice(match.index, match.index + 1600);
+    const afterLabel = context.replace(/^Save this event:\s*/i, "");
+    const titleMatch = afterLabel.match(/^(.{8,180}?)(?=\s+(?:Save this event:|Sales end soon|Going fast|Almost full|Nearly full|Selling quickly|Free|From\s+[€$£]|\b(?:Mon|Tue|Tues|Wed|Thu|Thur|Thurs|Fri|Sat|Sun),?\s+))/i);
+    const title = cleanText(titleMatch?.[1] || "");
+    if (!title || /^save this event/i.test(title)) continue;
+
+    const dateMatch = context.match(datePattern);
+    const startDate = normalizeDate(dateMatch?.[0]);
+    if (!startDate) continue;
+
+    const location = locationAfterEventbriteDate(context, dateMatch[0], source.area);
+    const eventText = `${title} ${context}`;
+    const category = inferCategory(eventText, source.category, source.name);
+    const area = inferArea(`${title} ${location} ${context}`, source.area);
+    events.push({
+      title,
+      summary: cleanText(context).slice(0, 240) || "Open Eventbrite for full details, tickets, and venue information.",
+      startDate,
+      location,
+      area,
+      category,
+      tags: tagsFor(category, area, source.category),
+      source: source.name,
+      url: source.url,
+      confidence: "Eventbrite text listing",
+    });
+  }
+
+  return events;
+}
+
+function locationAfterEventbriteDate(context, dateText, fallbackArea) {
+  const afterDate = cleanText(context.slice(context.indexOf(dateText) + String(dateText).length));
+  const beforePrice = afterDate.split(/\b(?:From|Free|Save this event:|Sales end soon|Going fast|Almost full|Nearly full|Selling quickly)\b/i)[0] || "";
+  const location = cleanText(beforePrice.replace(/^[,.\s]+/, "").slice(0, 120));
+  if (location.length >= 3) return location;
+  return locationFromEventbriteContext(context, fallbackArea);
 }
 
 async function fetchEventbriteDiscoveredEvents(source) {
