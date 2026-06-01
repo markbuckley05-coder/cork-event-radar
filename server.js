@@ -1667,6 +1667,73 @@ function directSourceCandidateFromUrl(text, area = "county") {
   };
 }
 
+function fallbackSourceCandidatesForPlan(plan) {
+  const query = encodeURIComponent(plan.activity);
+  const category = plan.category || "festival";
+  const common = [
+    {
+      name: `Eventbrite Cork search: ${plan.activity}`,
+      url: `https://www.eventbrite.ie/d/ireland--cork/events/?q=${query}`,
+      area: "county",
+      category,
+      searchTerm: plan.activity,
+      reason: "Generated Eventbrite search page",
+    },
+    {
+      name: `Meetup Cork search: ${plan.activity}`,
+      url: `https://www.meetup.com/find/?keywords=${query}&location=ie--Cork&source=EVENTS`,
+      area: "county",
+      category,
+      searchTerm: plan.activity,
+      reason: "Generated Meetup search page",
+    },
+    {
+      name: `Reddit Cork search: ${plan.activity}`,
+      url: `https://www.reddit.com/r/cork/search.json?q=${query}&restrict_sr=1&sort=new&t=month`,
+      area: "county",
+      category,
+      kind: "reddit",
+      searchTerm: plan.activity,
+      reason: "Generated Reddit search page",
+    },
+  ];
+
+  if (category === "sport") {
+    common.unshift(
+      {
+        name: `Cork Sports Partnership search: ${plan.activity}`,
+        url: `https://www.corksports.ie/?s=${query}`,
+        area: "county",
+        category,
+        searchTerm: plan.activity,
+        reason: "Generated local sports directory search",
+      }
+    );
+    if (matchesTerm(plan.activity, "basketball")) {
+      common.unshift({
+        name: `Basketball Ireland search: ${plan.activity}`,
+        url: `https://ireland.basketball/?s=${query}`,
+        area: "county",
+        category,
+        searchTerm: plan.activity,
+        reason: "Generated national governing body search",
+      });
+    }
+  }
+
+  return common.map((candidate) =>
+    sourceFromCandidate({
+      ...candidate,
+      searchTerms: activityTermsFor(plan.activity, plan.aliases),
+      aliases: plan.aliases,
+      negativeTerms: plan.negativeTerms,
+      validationSignals: plan.validationSignals,
+      rejectionSignals: plan.rejectionSignals,
+      localityTerms: plan.localityTerms,
+    })
+  );
+}
+
 async function investigateSuggestionText(text) {
   const activity = cleanText(text);
   const direct = directSourceCandidateFromUrl(activity);
@@ -1698,13 +1765,16 @@ async function investigateSuggestionText(text) {
     .slice(0, 5)
     .map((query) => `https://duckduckgo.com/html/?q=${encodeURIComponent(query)}`);
   const foundUrls = [];
+  const searchAttempts = [];
 
   for (const url of searchUrls) {
     try {
       const html = await fetchHtml(url);
-      foundUrls.push(...extractDiscoveryLinks(html, url));
-    } catch {
-      // Search providers can throttle; keep any links already found.
+      const links = extractDiscoveryLinks(html, url);
+      foundUrls.push(...links);
+      searchAttempts.push({ url, ok: true, count: links.length });
+    } catch (error) {
+      searchAttempts.push({ url, ok: false, error: error.message, count: 0 });
     }
   }
 
@@ -1733,7 +1803,7 @@ async function investigateSuggestionText(text) {
     })
   );
 
-  const candidates = inspections
+  const inspectedCandidates = inspections
     .filter((item) => item.source)
     .map((item, index) => ({
       ...sourceFromCandidate(item.source),
@@ -1745,6 +1815,16 @@ async function investigateSuggestionText(text) {
         location: event.location,
       })),
     }));
+  const fallbackCandidates = fallbackSourceCandidatesForPlan(plan)
+    .filter((source) => !seen.has(sourceIdentity(source)))
+    .map((source, index) => ({
+      ...source,
+      id: `fallback_${index}_${Buffer.from(source.url).toString("base64url").slice(0, 12)}`,
+      eventCount: 0,
+      fallback: true,
+      sampleEvents: [],
+    }));
+  const candidates = [...inspectedCandidates, ...fallbackCandidates].slice(0, 14);
 
   return {
     ok: true,
@@ -1754,6 +1834,7 @@ async function investigateSuggestionText(text) {
       category: plan.category,
       queries: activityDiscoveryQueries({ name: plan.activity, category: plan.category, area: "county" }).slice(0, 5),
     },
+    searchAttempts,
     candidates,
   };
 }

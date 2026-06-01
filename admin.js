@@ -164,10 +164,11 @@ async function investigate(text, suggestionId = "") {
     });
     renderCandidates(payload.candidates || []);
     const count = (payload.candidates || []).length;
+    const searched = payload.searchAttempts?.length ? ` Searched ${payload.searchAttempts.length} web query page${payload.searchAttempts.length === 1 ? "" : "s"}.` : "";
     setStatus(
       count
-        ? `Found ${count} candidate source${count === 1 ? "" : "s"}. Tick useful ones below, then approve.`
-        : `No candidates found for "${suggestion}". Try a direct club/listings URL.`,
+        ? `Found ${count} candidate source${count === 1 ? "" : "s"}.${searched} Tick useful ones below, then approve.`
+        : `No candidates found for "${suggestion}".${searched} Try a direct club/listings URL.`,
       count ? "success" : "error"
     );
   } catch (error) {
