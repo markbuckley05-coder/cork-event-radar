@@ -773,6 +773,69 @@ function extractJsonLdEvents(html, source) {
   return events;
 }
 
+function extractEventbriteListingEvents(html, source) {
+  if (!/eventbrite\./i.test(source.url || source.name || "")) return [];
+  const text = cleanText(html);
+  const events = [];
+  const seen = new Set();
+  const eventUrlRegex = /https:\/\/www\.eventbrite\.ie\/e\/([a-z0-9-]+?)-(?:tickets|registration)-(\d+)/gi;
+  const datePattern =
+    /\b(?:mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun),?\s+(?:\d{1,2}\s+(?:jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|sept|september|oct|october|nov|november|dec|december)|(?:jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|sept|september|oct|october|nov|november|dec|december)\s+\d{1,2}),?\s*(?:\d{4})?(?:,\s*\d{1,2}[:.]\d{2})?/i;
+  let match;
+
+  while ((match = eventUrlRegex.exec(html)) && events.length < 30) {
+    const slug = match[1];
+    const url = `https://www.eventbrite.ie/e/${slug}-tickets-${match[2]}`;
+    const index = match.index;
+    const context = cleanText(html.slice(Math.max(0, index - 1600), index + 2400));
+    const title = titleFromEventbriteSlug(slug);
+    const dateMatch = context.match(datePattern);
+    const startDate = normalizeDate(dateMatch?.[0]);
+    if (!title || !startDate) continue;
+
+    const key = normalizeSearchText(`${title} ${startDate} ${url}`);
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const location = locationFromEventbriteContext(context, source.area);
+    const eventText = `${title} ${context}`;
+    const category = inferCategory(eventText, source.category, source.name);
+    const area = inferArea(`${title} ${location} ${context}`, source.area);
+    events.push({
+      title,
+      summary: cleanText(context).slice(0, 240) || "Open Eventbrite for full details, tickets, and venue information.",
+      startDate,
+      location,
+      area,
+      category,
+      tags: tagsFor(category, area, source.category),
+      source: source.name,
+      url,
+      confidence: "Eventbrite listing",
+    });
+  }
+
+  return events;
+}
+
+function titleFromEventbriteSlug(slug) {
+  return cleanText(
+    String(slug || "")
+      .replace(/-\d+$/, "")
+      .split("-")
+      .filter((word) => !/^(tickets|registration|event|events)$/i.test(word))
+      .join(" ")
+      .replace(/\b\w/g, (letter) => letter.toUpperCase())
+  );
+}
+
+function locationFromEventbriteContext(context, fallbackArea) {
+  const text = cleanText(context);
+  const locationMatch = text.match(/\b(?:Cork|Bantry|Skibbereen|Clonakilty|Kinsale|Fermoy|Mallow|Midleton|Carrigaline|Ballyorgan|Anglesboro|Kildorrery|Ballyhoura)[A-Za-z0-9 ,.'-]{0,90}/i);
+  if (locationMatch) return cleanText(locationMatch[0]);
+  return fallbackArea === "city" ? "Cork City" : "County Cork";
+}
+
 function extractHeuristicEvents(html, source) {
   const events = [];
   const linkRegex = /<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
@@ -1327,8 +1390,9 @@ async function inspectDiscoveredUrl(source, found) {
     const linkedFixtures = await fetchLinkedFixtureEvents(html, discovered);
     const structured = extractJsonLdEvents(html, discovered);
     const knownText = extractKnownTextEvents(html, discovered);
+    const eventbrite = extractEventbriteListingEvents(html, discovered);
     const heuristic = structured.length ? [] : extractHeuristicEvents(html, discovered);
-    const events = filterLearnedSearchEvents([...sportFixtures, ...tableFixtures, ...linkedFixtures, ...knownText, ...structured, ...heuristic], discovered);
+    const events = filterLearnedSearchEvents([...sportFixtures, ...tableFixtures, ...linkedFixtures, ...knownText, ...structured, ...eventbrite, ...heuristic], discovered);
     return {
       events,
       source: relevantSource || events.length
@@ -1438,8 +1502,9 @@ async function fetchSource(source) {
     const linkedFixtures = await fetchLinkedFixtureEvents(html, source);
     const structured = extractJsonLdEvents(html, source);
     const knownText = extractKnownTextEvents(html, source);
+    const eventbrite = extractEventbriteListingEvents(html, source);
     const heuristic = structured.length ? [] : extractHeuristicEvents(html, source);
-    return { source: source.name, ok: true, events: filterLearnedSearchEvents([...sportFixtures, ...tableFixtures, ...linkedFixtures, ...knownText, ...structured, ...heuristic], source) };
+    return { source: source.name, ok: true, events: filterLearnedSearchEvents([...sportFixtures, ...tableFixtures, ...linkedFixtures, ...knownText, ...structured, ...eventbrite, ...heuristic], source) };
   } catch (error) {
     return { source: source.name, ok: false, error: error.message, events: [] };
   }
