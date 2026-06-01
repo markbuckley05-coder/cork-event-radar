@@ -12,6 +12,10 @@ const categories = [
   { id: "markets", label: "Markets" },
 ];
 
+function defaultCategories() {
+  return new Set(["food"]);
+}
+
 const sourceDirectory = [
   { name: "Pure Cork", url: "https://www.purecork.ie/whats-on" },
   { name: "Taste Cork Markets", url: "https://www.tastecork.ie/explore-cork/food-markets/farmers-markets/west-cork" },
@@ -175,7 +179,7 @@ const state = {
   events: starterEvents,
   query: "",
   area: "all",
-  categories: new Set(categories.map((category) => category.id)),
+  categories: defaultCategories(),
   from: "",
   to: "",
   scanning: false,
@@ -506,6 +510,7 @@ async function scanSources() {
       area: state.area,
       from: state.from,
       to: state.to,
+      categories: [...state.categories].join(","),
     });
     const response = await fetch(`/api/events?${params.toString()}`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -564,7 +569,7 @@ clearFilters.addEventListener("click", () => {
   state.area = "all";
   state.from = "";
   state.to = "";
-  state.categories = new Set(categories.map((category) => category.id));
+  state.categories = defaultCategories();
   searchInput.value = "";
   fromDate.value = "";
   toDate.value = "";
