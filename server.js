@@ -586,6 +586,10 @@ function isActivitySearchPrompt(value, category) {
     "badminton",
     "sailing",
     "triathlon",
+    "hill walking",
+    "hiking",
+    "walking",
+    "walking club",
     "kabuki",
     "sean nos",
     "seanos",
@@ -1030,7 +1034,9 @@ function learnedSearchTermMatches(event, source) {
   const terms = source.searchTerms?.length ? source.searchTerms : activityTermsFor(source.searchTerm);
   const haystack = normalizeSearchText([event.title, event.summary, event.location, event.url, ...(event.tags || [])].join(" "));
   if (isNegativeActivityMatch(haystack, source)) return false;
-  const termMatch = terms.some((term) => matchesTerm(haystack, term));
+  const sourceContext = normalizeSearchText([source.name, source.url, source.searchTerm, ...(source.aliases || [])].join(" "));
+  const sourceIsTermScoped = terms.some((term) => matchesTerm(sourceContext, term));
+  const termMatch = sourceIsTermScoped || terms.some((term) => matchesTerm(haystack, term));
   if (!termMatch) return false;
   if (source.category === "sport" && isActivitySearchPrompt(source.searchTerm, source.category)) {
     const localityTerms = source.localityTerms?.length ? source.localityTerms : ["cork", "west cork", "cork city", "county cork"];
@@ -1922,15 +1928,25 @@ async function investigateSuggestionText(text) {
         location: event.location,
       })),
     }));
-  const fallbackCandidates = fallbackSourceCandidatesForPlan(plan)
-    .filter((source) => !seen.has(sourceIdentity(source)))
-    .map((source, index) => ({
-      ...source,
-      id: `fallback_${index}_${Buffer.from(source.url).toString("base64url").slice(0, 12)}`,
-      eventCount: 0,
-      fallback: true,
-      sampleEvents: [],
-    }));
+  const fallbackSources = fallbackSourceCandidatesForPlan(plan).filter((source) => !seen.has(sourceIdentity(source))).slice(0, 5);
+  const fallbackInspections = await Promise.all(
+    fallbackSources.map(async (source) => {
+      const template = { ...sourceTemplate, ...source, learnedSearch: Boolean(source.searchTerm) };
+      const result = await inspectDiscoveredUrl(template, { url: source.url, name: source.name, reason: source.reason || "Generated fallback source" });
+      return { source, events: result.events || [] };
+    })
+  );
+  const fallbackCandidates = fallbackInspections.map((item, index) => ({
+    ...item.source,
+    id: `fallback_${index}_${Buffer.from(item.source.url).toString("base64url").slice(0, 12)}`,
+    eventCount: item.events.length,
+    fallback: true,
+    sampleEvents: item.events.slice(0, 3).map((event) => ({
+      title: event.title,
+      date: event.startDate,
+      location: event.location,
+    })),
+  }));
   const candidates = [...inspectedCandidates, ...fallbackCandidates].slice(0, 14);
 
   return {
