@@ -501,6 +501,7 @@ async function submitSuggestion() {
 async function scanSources() {
   if (state.scanning) return;
   state.scanning = true;
+  const previousCategories = new Set(state.categories);
   setScanControls(true);
   setEngineState("running", "Engine running", "Scanning Cork sources");
 
@@ -523,6 +524,12 @@ async function scanSources() {
       if (!byKey.has(key)) byKey.set(key, event);
     });
     state.events = [...byKey.values()];
+    if (state.query && !state.events.some((event) => previousCategories.has(event.category) || event.tags?.some((tag) => previousCategories.has(tag)))) {
+      const matchingCategories = categories
+        .filter((category) => state.events.some((event) => event.category === category.id || event.tags?.includes(category.id)))
+        .map((category) => category.id);
+      if (matchingCategories.length) state.categories = new Set(matchingCategories);
+    }
     setEngineState(
       "results",
       liveEvents.length ? "Results ready" : "Ready with starter results",

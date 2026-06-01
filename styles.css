@@ -600,6 +600,12 @@ main {
   margin: 0;
 }
 
+.admin-help {
+  color: var(--muted);
+  margin-bottom: 10px !important;
+  line-height: 1.45;
+}
+
 .admin-token-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

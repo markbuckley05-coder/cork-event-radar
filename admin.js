@@ -121,6 +121,11 @@ function renderCandidates(candidates) {
             <small>${escapeHtml(candidate.category)} · ${escapeHtml(candidate.area)} · ${candidate.eventCount || 0} events found</small>
             <a href="${escapeHtml(candidate.url)}" target="_blank" rel="noreferrer">${escapeHtml(candidate.url)}</a>
             ${
+              candidate.eventCount
+                ? ""
+                : "<em>This link has not produced dated event records yet. Approve only if it is a strong source, then test it on the dashboard with the right category selected.</em>"
+            }
+            ${
               candidate.sampleEvents?.length
                 ? `<em>${candidate.sampleEvents.map((event) => escapeHtml(event.title)).join("; ")}</em>`
                 : ""
@@ -189,6 +194,7 @@ async function approveCheckedSources() {
     setStatus("Tick at least one source to approve.", "error");
     return;
   }
+  const zeroEventCount = sources.filter((source) => !source.eventCount).length;
 
   approveSourcesButton.disabled = true;
   try {
@@ -196,7 +202,10 @@ async function approveCheckedSources() {
       method: "POST",
       body: JSON.stringify({ suggestionId: currentSuggestionId, sources }),
     });
-    setStatus(payload.message, "success");
+    const warning = zeroEventCount
+      ? ` ${zeroEventCount} approved source${zeroEventCount === 1 ? " has" : "s have"} not produced dated events yet.`
+      : "";
+    setStatus(`${payload.message}${warning}`, zeroEventCount ? "error" : "success");
     renderCandidates([]);
     await loadAdmin();
   } catch (error) {
