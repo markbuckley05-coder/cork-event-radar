@@ -165,6 +165,9 @@ function activityTermsFor(value, aliases = []) {
   const builtInAliases = {
     soccer: ["soccer", "football", "football club", "fc", "afc", "league of ireland"],
     football: ["football", "soccer", "football club", "fc", "afc", "league of ireland"],
+    "hill walking": ["hill walking", "hillwalking", "hiking", "guided walk", "guided walks", "walk", "walking"],
+    hillwalking: ["hill walking", "hillwalking", "hiking", "guided walk", "guided walks", "walk", "walking"],
+    hiking: ["hiking", "hill walking", "hillwalking", "guided walk", "guided walks", "walk", "walking"],
   };
   return [...new Set([term, ...(builtInAliases[term] || []), ...aliases.map(normalizeSearchText)].filter(Boolean))];
 }
@@ -818,6 +821,45 @@ function extractEventbriteListingEvents(html, source) {
   return events;
 }
 
+async function fetchEventbriteDiscoveredEvents(source) {
+  if (!/eventbrite\./i.test(source.url || source.name || "") || !source.searchTerm) return [];
+  if (/\/e\//i.test(source.url)) return [];
+
+  const queries = [
+    `site:eventbrite.ie/e ${source.searchTerm} Cork`,
+    `site:eventbrite.ie/e ${source.searchTerm} Eventbrite Cork`,
+    `${source.searchTerm} Eventbrite Cork events`,
+  ];
+  const discoveryTemplate = {
+    ...source,
+    learnedSearch: true,
+    searchTerms: source.searchTerms?.length ? source.searchTerms : activityTermsFor(source.searchTerm, source.aliases || []),
+    localityTerms: source.localityTerms?.length ? source.localityTerms : ["cork", "county cork", "west cork", "cork city", "munster", "ballyhoura"],
+  };
+  const discovered = await discoverSourceLinks(queries, discoveryTemplate);
+  const eventLinks = discovered.links
+    .map((link) => link.url)
+    .filter((url) => /eventbrite\.[a-z.]+\/e\//i.test(url))
+    .slice(0, 8);
+
+  const results = await Promise.all(
+    eventLinks.map(async (url) => {
+      try {
+        const html = await fetchHtml(url);
+        return [
+          ...extractJsonLdEvents(html, { ...source, url }),
+          ...extractEventbriteListingEvents(html, { ...source, url }),
+          ...extractHeuristicEvents(html, { ...source, url }),
+        ];
+      } catch {
+        return [];
+      }
+    })
+  );
+
+  return filterLearnedSearchEvents(dedupe(results.flat()), discoveryTemplate);
+}
+
 function titleFromEventbriteSlug(slug) {
   return cleanText(
     String(slug || "")
@@ -1391,8 +1433,9 @@ async function inspectDiscoveredUrl(source, found) {
     const structured = extractJsonLdEvents(html, discovered);
     const knownText = extractKnownTextEvents(html, discovered);
     const eventbrite = extractEventbriteListingEvents(html, discovered);
+    const eventbriteDiscovered = await fetchEventbriteDiscoveredEvents(discovered);
     const heuristic = structured.length ? [] : extractHeuristicEvents(html, discovered);
-    const events = filterLearnedSearchEvents([...sportFixtures, ...tableFixtures, ...linkedFixtures, ...knownText, ...structured, ...eventbrite, ...heuristic], discovered);
+    const events = filterLearnedSearchEvents([...sportFixtures, ...tableFixtures, ...linkedFixtures, ...knownText, ...structured, ...eventbrite, ...eventbriteDiscovered, ...heuristic], discovered);
     return {
       events,
       source: relevantSource || events.length
@@ -1503,8 +1546,9 @@ async function fetchSource(source) {
     const structured = extractJsonLdEvents(html, source);
     const knownText = extractKnownTextEvents(html, source);
     const eventbrite = extractEventbriteListingEvents(html, source);
+    const eventbriteDiscovered = await fetchEventbriteDiscoveredEvents(source);
     const heuristic = structured.length ? [] : extractHeuristicEvents(html, source);
-    return { source: source.name, ok: true, events: filterLearnedSearchEvents([...sportFixtures, ...tableFixtures, ...linkedFixtures, ...knownText, ...structured, ...eventbrite, ...heuristic], source) };
+    return { source: source.name, ok: true, events: filterLearnedSearchEvents([...sportFixtures, ...tableFixtures, ...linkedFixtures, ...knownText, ...structured, ...eventbrite, ...eventbriteDiscovered, ...heuristic], source) };
   } catch (error) {
     return { source: source.name, ok: false, error: error.message, events: [] };
   }
