@@ -2,6 +2,7 @@ const adminTokenInput = document.querySelector("#adminToken");
 const saveTokenButton = document.querySelector("#saveToken");
 const manualInvestigation = document.querySelector("#manualInvestigation");
 const manualInvestigateButton = document.querySelector("#manualInvestigateButton");
+const manualStatus = document.querySelector("#manualStatus");
 const suggestionAdminList = document.querySelector("#suggestionAdminList");
 const candidateList = document.querySelector("#candidateList");
 const approveSourcesButton = document.querySelector("#approveSourcesButton");
@@ -35,6 +36,10 @@ function adminHeaders() {
 function setStatus(message, type = "") {
   adminStatus.textContent = message;
   adminStatus.className = `suggestion-status ${type}`.trim();
+  if (manualStatus) {
+    manualStatus.textContent = message;
+    manualStatus.className = `suggestion-status ${type}`.trim();
+  }
 }
 
 async function adminFetch(url, options = {}) {
@@ -141,21 +146,38 @@ async function loadAdmin() {
 }
 
 async function investigate(text, suggestionId = "") {
+  const suggestion = String(text || "").trim();
+  if (suggestion.length < 3) {
+    setStatus("Enter a suggestion first, then click Investigate.", "error");
+    return;
+  }
   currentSuggestionId = suggestionId;
-  setStatus("Investigating sources...", "");
+  setStatus(`Investigating "${suggestion}"... This can take up to a minute.`, "");
   candidateList.innerHTML = "";
   manualInvestigateButton.disabled = true;
+  const originalButtonText = manualInvestigateButton.textContent;
+  manualInvestigateButton.textContent = "Investigating...";
   try {
     const payload = await adminFetch("/api/admin/investigate", {
       method: "POST",
-      body: JSON.stringify({ suggestion: text }),
+      body: JSON.stringify({ suggestion }),
     });
     renderCandidates(payload.candidates || []);
-    setStatus(`Found ${(payload.candidates || []).length} candidate source${(payload.candidates || []).length === 1 ? "" : "s"}.`, "success");
+    const count = (payload.candidates || []).length;
+    setStatus(
+      count
+        ? `Found ${count} candidate source${count === 1 ? "" : "s"}. Tick useful ones below, then approve.`
+        : `No candidates found for "${suggestion}". Try a direct club/listings URL.`,
+      count ? "success" : "error"
+    );
   } catch (error) {
-    setStatus(error.message, "error");
+    const message = error.message === "Admin token required."
+      ? "Admin token required. Enter your ADMIN_TOKEN above, click Save token, then try again."
+      : error.message;
+    setStatus(message, "error");
   } finally {
     manualInvestigateButton.disabled = false;
+    manualInvestigateButton.textContent = originalButtonText;
   }
 }
 
