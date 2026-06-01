@@ -1,0 +1,24 @@
+{
+  "sources": [
+    {
+      "name": "Cork County Cricket Club Upcoming Fixtures",
+      "url": "https://www.cricketleinster.ie/clubs/cork-county",
+      "area": "city",
+      "category": "sport",
+      "searchTerm": "cricket",
+      "searchTerms": ["cricket", "cork county cricket club"],
+      "validationSignals": ["fixtures", "match centre", "Cork County"],
+      "rejectionSignals": ["news only", "no fixtures"]
+    },
+    {
+      "name": "Cork Harlequins Cricket Club Fixtures",
+      "url": "https://www.cricketleinster.ie/clubs/cork-harlequins",
+      "area": "city",
+      "category": "sport",
+      "searchTerm": "cricket",
+      "searchTerms": ["cricket", "cork harlequins"],
+      "validationSignals": ["fixtures", "match centre", "Cork Harlequins"],
+      "rejectionSignals": ["news only", "no fixtures"]
+    }
+  ]
+}

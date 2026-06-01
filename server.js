@@ -1,12 +1,21 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const net = require("net");
+const tls = require("tls");
 
 const PORT = Number(process.env.PORT || 4173);
 const ROOT = __dirname;
 const LEARNING_FILE = path.join(ROOT, "learned-sources.json");
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
-const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4.1-mini";
+const MANUAL_SOURCES_FILE = path.join(ROOT, "manual-sources.json");
+const SUGGESTIONS_FILE = path.join(ROOT, "suggestions-inbox.json");
+const SUGGESTION_EMAIL_TO = process.env.SUGGESTION_EMAIL_TO || "";
+const SMTP_HOST = process.env.SMTP_HOST || "";
+const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
+const SMTP_USER = process.env.SMTP_USER || "";
+const SMTP_PASS = process.env.SMTP_PASS || "";
+const SMTP_FROM = process.env.SMTP_FROM || SMTP_USER || SUGGESTION_EMAIL_TO;
+const SMTP_SECURE = String(process.env.SMTP_SECURE || "").toLowerCase() === "true" || SMTP_PORT === 465;
 
 const seedSources = [
   { name: "Pure Cork", url: "https://www.purecork.ie/whats-on", area: "county", category: "festival" },
@@ -76,6 +85,36 @@ function readLearningState() {
   }
 }
 
+function readManualSources() {
+  try {
+    const raw = fs.readFileSync(MANUAL_SOURCES_FILE, "utf8");
+    const parsed = JSON.parse(raw);
+    const sources = Array.isArray(parsed) ? parsed : parsed.sources;
+    return Array.isArray(sources) ? sources.filter((source) => source?.name && source?.url) : [];
+  } catch {
+    return [];
+  }
+}
+
+function readSuggestionInbox() {
+  try {
+    const raw = fs.readFileSync(SUGGESTIONS_FILE, "utf8");
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed.suggestions) ? parsed.suggestions : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeSuggestionInbox(suggestions) {
+  const payload = {
+    suggestions,
+    updatedAt: new Date().toISOString(),
+  };
+  fs.writeFileSync(SUGGESTIONS_FILE, `${JSON.stringify(payload, null, 2)}\n`);
+  return payload;
+}
+
 function writeLearningState(state) {
   const safeState = {
     learnedSources: state.learnedSources || [],
@@ -131,8 +170,7 @@ function activityDiscoveryQueries(candidate) {
 function activityDiscoverySourcesForCandidate(candidate) {
   if (!isActivitySearchPrompt(candidate.name, candidate.category) && !(candidate.positiveQueries || candidate.suggestedQueries || []).length) return [];
   const searchTerms = candidateActivityTerms(candidate);
-  const queryLimit = candidate.planner === "openai" ? 4 : 8;
-  return activityDiscoveryQueries(candidate).slice(0, queryLimit).map((query) => ({
+  return activityDiscoveryQueries(candidate).slice(0, 8).map((query) => ({
     name: `Activity discovery: ${query}`,
     url: `https://duckduckgo.com/html/?q=${encodeURIComponent(query)}`,
     area: candidate.area || "county",
@@ -151,7 +189,6 @@ function activityDiscoverySourcesForCandidate(candidate) {
     rejectionSignals: candidate.rejectionSignals || [],
     sourceTypes: candidate.sourceTypes || [],
     localityTerms: candidate.localityTerms || [],
-    planner: candidate.planner || "",
   }));
 }
 
@@ -170,6 +207,22 @@ function activityCandidateFromQuery(query) {
 
 function getActiveSources(searchQuery = "") {
   const learning = readLearningState();
+  const manualSources = readManualSources().map((source) => ({
+    name: source.name,
+    url: source.url,
+    area: source.area || "county",
+    category: source.category || "festival",
+    kind: source.kind || "",
+    searchTerm: source.searchTerm || "",
+    searchTerms: source.searchTerms || [],
+    aliases: source.aliases || [],
+    negativeTerms: source.negativeTerms || [],
+    validationSignals: source.validationSignals || [],
+    rejectionSignals: source.rejectionSignals || [],
+    localityTerms: source.localityTerms || [],
+    manual: true,
+    learnedSearch: Boolean(source.searchTerm),
+  }));
   const learnedSources = learning.learnedSources
     .filter((source) => source.status !== "paused" && source.url)
     .map((source) => ({
@@ -187,7 +240,6 @@ function getActiveSources(searchQuery = "") {
       rejectionSignals: source.rejectionSignals || [],
       sourceTypes: source.sourceTypes || [],
       localityTerms: source.localityTerms || [],
-      planner: source.planner || "",
       learned: true,
       learnedSearch: Boolean(source.searchTerm),
     }));
@@ -272,7 +324,7 @@ function getActiveSources(searchQuery = "") {
       return searches;
     });
   const seen = new Set();
-  return [...seedSources, ...learnedSources, ...activityDiscoverySources, ...candidateSearches].filter((source) => {
+  return [...seedSources, ...manualSources, ...learnedSources, ...activityDiscoverySources, ...candidateSearches].filter((source) => {
     const key = sourceIdentity(source);
     if (!key || seen.has(key)) return false;
     seen.add(key);
@@ -457,68 +509,6 @@ function fallbackSuggestionPlan(value, area = "county") {
     sourceTypes: category === "sport" ? ["club website", "association website", "league fixture page"] : ["official website", "venue calendar", "listing page"],
     localityTerms: ["Cork", "West Cork", "Cork City", "County Cork", "Munster"],
     confidence: "medium",
-    planner: "fallback",
-  };
-}
-
-function plannerSchema() {
-  return {
-    type: "object",
-    additionalProperties: false,
-    required: [
-      "activity",
-      "category",
-      "aliases",
-      "positiveQueries",
-      "negativeTerms",
-      "sourceHints",
-      "likelySourceTypes",
-      "validationSignals",
-      "rejectionSignals",
-      "sourceTypes",
-      "localityTerms",
-      "confidence",
-    ],
-    properties: {
-      activity: { type: "string" },
-      category: { type: "string", enum: ["food", "festival", "music", "trad", "sport", "rugby", "gaa", "arts", "family", "agriculture", "markets"] },
-      aliases: { type: "array", items: { type: "string" }, maxItems: 12 },
-      positiveQueries: { type: "array", items: { type: "string" }, maxItems: 16 },
-      negativeTerms: { type: "array", items: { type: "string" }, maxItems: 12 },
-      sourceHints: { type: "array", items: { type: "string" }, maxItems: 12 },
-      likelySourceTypes: { type: "array", items: { type: "string" }, maxItems: 8 },
-      validationSignals: { type: "array", items: { type: "string" }, maxItems: 12 },
-      rejectionSignals: { type: "array", items: { type: "string" }, maxItems: 12 },
-      sourceTypes: { type: "array", items: { type: "string" }, maxItems: 8 },
-      localityTerms: { type: "array", items: { type: "string" }, maxItems: 10 },
-      confidence: { type: "string", enum: ["low", "medium", "high"] },
-    },
-  };
-}
-
-function sourceSearchSchema() {
-  return {
-    type: "object",
-    additionalProperties: false,
-    required: ["sources"],
-    properties: {
-      sources: {
-        type: "array",
-        maxItems: 8,
-        items: {
-          type: "object",
-          additionalProperties: false,
-          required: ["name", "url", "reason", "sourceType", "confidence"],
-          properties: {
-            name: { type: "string" },
-            url: { type: "string" },
-            reason: { type: "string" },
-            sourceType: { type: "string" },
-            confidence: { type: "string", enum: ["low", "medium", "high"] },
-          },
-        },
-      },
-    },
   };
 }
 
@@ -531,132 +521,6 @@ function extractResponseText(payload) {
     });
   });
   return texts.join("\n");
-}
-
-async function callOpenAiPlanner(value, area) {
-  if (!OPENAI_API_KEY) return null;
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${OPENAI_API_KEY}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model: OPENAI_MODEL,
-      input: [
-        {
-          role: "system",
-          content:
-            "You are an event-source discovery planner for a local events scraper. Given a user suggestion and target locality, infer whether it is an activity, sport, music genre, cultural tradition, theatre type, food event, market type, venue, festival, organisation, club, league, source URL, or listing page. Your job is not to list events. Your job is to produce a discovery plan that helps the scraper find reliable recurring source pages. Prioritise durable, repeatable sources over one-off articles: official websites, club pages, fixture/result pages, venue calendars, association calendars, festival programmes, ticketing pages, listing pages, community calendars, aggregator searches, and social/community event listings. Return aliases, spelling variants, local terminology variants, likely source types, named source hints if inferable, source-oriented search queries, negative terms, validation signals for useful pages, and rejection signals for noisy pages. Search queries should find source pages, not just articles, and should use terms such as fixtures, results, events, calendar, programme, whats on, listings, tickets, club, venue, association, league, festival, and market. Do not overfit to any example. If the suggestion is soccer, reason about association football and avoid GAA/rugby ambiguity. If it is rowing, reason about rowing clubs, regattas, coastal rowing, and calendars. If it is kabuki, reason about theatre/cultural performance. If it is sean-nos, include Irish spelling variants and trad organisations. For Irish/local ambiguity, disambiguate carefully. Return only JSON matching the schema.",
-        },
-        {
-          role: "user",
-          content: `Suggestion: ${value}\nArea: ${area || "all Cork"}\nReturn a source discovery plan for the Cork Event Radar app.`,
-        },
-      ],
-      text: {
-        format: {
-          type: "json_schema",
-          name: "source_discovery_plan",
-          strict: true,
-          schema: plannerSchema(),
-        },
-      },
-    }),
-  });
-  if (!response.ok) throw new Error(`OpenAI planner failed: ${response.status}`);
-  const payload = await response.json();
-  return JSON.parse(extractResponseText(payload));
-}
-
-async function callOpenAiSourceSearch(source) {
-  if (!OPENAI_API_KEY) return [];
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${OPENAI_API_KEY}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model: OPENAI_MODEL,
-      tools: [
-        {
-          type: "web_search_preview",
-          search_context_size: "low",
-          user_location: {
-            type: "approximate",
-            country: "IE",
-            region: "Cork",
-            city: "Cork",
-            timezone: "Europe/Dublin",
-          },
-        },
-      ],
-      input: [
-        {
-          role: "system",
-          content:
-            "Find durable source pages for a Cork local event scraper. Return official club, association, venue, fixture, results, calendar, listings, programme, or ticket pages that can be revisited. Prefer pages with dated future events or recurring fixture calendars. Avoid one-off news articles, generic directories, unrelated locations, and pages without event/listing evidence. Return only JSON matching the schema.",
-        },
-        {
-          role: "user",
-          content: [
-            `Activity or topic: ${source.searchTerm}`,
-            `Category: ${source.category}`,
-            `Area: ${source.area || "County Cork"}`,
-            `Search query: ${source.searchQuery || source.name}`,
-            `Aliases: ${(source.aliases || []).join(", ") || "none"}`,
-            `Likely source types: ${(source.sourceTypes || source.likelySourceTypes || []).join(", ") || "none"}`,
-            `Validation signals: ${(source.validationSignals || []).join(", ") || "dated events, fixtures, results, calendar"}`,
-            `Rejection signals: ${(source.rejectionSignals || source.negativeTerms || []).join(", ") || "unrelated location, no dates, generic article"}`,
-          ].join("\n"),
-        },
-      ],
-      text: {
-        format: {
-          type: "json_schema",
-          name: "source_search_results",
-          strict: true,
-          schema: sourceSearchSchema(),
-        },
-      },
-    }),
-  });
-  if (!response.ok) throw new Error(`OpenAI source search failed: ${response.status}`);
-  const payload = await response.json();
-  const parsed = JSON.parse(extractResponseText(payload));
-  return (parsed.sources || [])
-    .map((item) => ({
-      ...item,
-      url: absolutize(item.url, item.url),
-    }))
-    .filter((item) => /^https?:\/\//i.test(item.url));
-}
-
-async function planSuggestion(value, area) {
-  const fallback = fallbackSuggestionPlan(value, area);
-  try {
-    const plan = await callOpenAiPlanner(value, area);
-    if (!plan) return fallback;
-    const category = normalizePlannerCategory(plan.category, fallback.category);
-    return {
-      activity: cleanText(plan.activity || fallback.activity),
-      category,
-      aliases: dedupeStrings(plan.aliases, 12),
-      positiveQueries: dedupeStrings(plan.positiveQueries, 16),
-      negativeTerms: dedupeStrings(plan.negativeTerms, 12),
-      sourceHints: dedupeStrings(plan.sourceHints, 12),
-      likelySourceTypes: dedupeStrings(plan.likelySourceTypes, 8),
-      validationSignals: dedupeStrings(plan.validationSignals, 12),
-      rejectionSignals: dedupeStrings(plan.rejectionSignals, 12),
-      sourceTypes: dedupeStrings(plan.sourceTypes, 8),
-      localityTerms: dedupeStrings(plan.localityTerms, 10),
-      confidence: ["low", "medium", "high"].includes(plan.confidence) ? plan.confidence : "medium",
-      planner: "openai",
-    };
-  } catch (error) {
-    return { ...fallback, planner: "fallback", plannerError: error.message };
-  }
 }
 
 function isActivitySearchPrompt(value, category) {
@@ -1303,7 +1167,6 @@ async function inspectDiscoveredUrl(source, found) {
             rejectionSignals: source.rejectionSignals || [],
             sourceTypes: source.sourceTypes || [],
             localityTerms: source.localityTerms || [],
-            planner: source.planner || "",
             evidenceTitle: events[0]?.title || found.reason || `${source.searchTerm} source discovered from search`,
           }
         : null,
@@ -1326,15 +1189,6 @@ async function fetchDiscoverySource(source) {
     foundSources = (await discoveryLinksFromSearchPage(source)).map((url) => ({ url }));
   } catch (error) {
     errors.push(`search-page: ${error.message}`);
-  }
-
-  if ((!foundSources.length || source.planner === "openai") && OPENAI_API_KEY) {
-    try {
-      const openAiSources = await callOpenAiSourceSearch(source);
-      foundSources = [...foundSources, ...openAiSources];
-    } catch (error) {
-      errors.push(`openai-source-search: ${error.message}`);
-    }
   }
 
   if (!foundSources.length) {
@@ -1619,19 +1473,17 @@ function topLearningSummary(learning) {
     candidateCount: learning.candidates.length,
     learnedSourceCount: learning.learnedSources.length,
     topCandidates: learning.candidates.slice(0, 8),
-    planner: {
-      openaiConfigured: Boolean(OPENAI_API_KEY),
-      model: OPENAI_MODEL,
-    },
   };
 }
 
 function healthSummary() {
   const learning = readLearningState();
+  const suggestions = readSuggestionInbox();
   return {
     ok: true,
-    openaiConfigured: Boolean(OPENAI_API_KEY),
-    model: OPENAI_MODEL,
+    aiEnabled: false,
+    manualSourceCount: readManualSources().length,
+    suggestionCount: suggestions.length,
     learnedSourceCount: learning.learnedSources.length,
     candidateCount: learning.candidates.length,
     updatedAt: learning.updatedAt || "",
@@ -1782,7 +1634,6 @@ function mergeCandidate(learning, candidate) {
     existing.sourceTypes = dedupeStrings([...(existing.sourceTypes || []), ...(candidate.sourceTypes || [])], 8);
     existing.localityTerms = dedupeStrings([...(existing.localityTerms || []), ...(candidate.localityTerms || [])], 10);
     existing.confidence = candidate.confidence || existing.confidence || "medium";
-    existing.planner = candidate.planner || existing.planner || "fallback";
     existing.suggestedQueries = dedupeStrings([...(candidate.suggestedQueries || []), ...(candidate.positiveQueries || []), ...candidateQueries(existing.name, existing.category)], 16);
     existing.evidence = [evidence, ...(existing.evidence || [])].slice(0, 5);
     return existing;
@@ -1804,7 +1655,6 @@ function mergeCandidate(learning, candidate) {
     sourceTypes: dedupeStrings(candidate.sourceTypes || [], 8),
     localityTerms: dedupeStrings(candidate.localityTerms || [], 10),
     confidence: candidate.confidence || "medium",
-    planner: candidate.planner || "fallback",
     suggestedQueries: dedupeStrings([...(candidate.suggestedQueries || []), ...(candidate.positiveQueries || []), ...candidateQueries(candidate.name, candidate.category || "festival")], 16),
     discoveredAt: now,
     lastSeenAt: now,
@@ -1833,7 +1683,6 @@ function mergeLearnedSource(learning, source, evidence) {
     existing.rejectionSignals = source.rejectionSignals || existing.rejectionSignals || [];
     existing.sourceTypes = source.sourceTypes || existing.sourceTypes || [];
     existing.localityTerms = source.localityTerms || existing.localityTerms || [];
-    existing.planner = source.planner || existing.planner || "";
     existing.lastValidatedAt = now;
     existing.status = "active";
     existing.evidence = [evidence, ...(existing.evidence || [])].slice(0, 5);
@@ -1855,7 +1704,6 @@ function mergeLearnedSource(learning, source, evidence) {
     rejectionSignals: source.rejectionSignals || [],
     sourceTypes: source.sourceTypes || [],
     localityTerms: source.localityTerms || [],
-    planner: source.planner || "",
     status: "active",
     sourceType: "user-suggested",
     discoveredAt: now,
@@ -1890,7 +1738,6 @@ function learnFromScan(results) {
           rejectionSignals: source.rejectionSignals || [],
           sourceTypes: source.sourceTypes || [],
           localityTerms: source.localityTerms || [],
-          planner: source.planner || "",
         },
         {
           title: source.evidenceTitle || "Discovered from learned activity search",
@@ -1977,207 +1824,124 @@ async function handleApiEvents(request, response) {
   });
 }
 
-async function handleApiPlan(request, response) {
-  const url = new URL(request.url, `http://${request.headers.host}`);
-  const suggestion = cleanText(url.searchParams.get("suggestion") || "");
-  const requestedArea = url.searchParams.get("area") || "county";
-  const area = ["west-cork", "city", "county", "all"].includes(requestedArea) ? requestedArea : "county";
+function smtpCommand(socket, command, expect = /^[23]/) {
+  return new Promise((resolve, reject) => {
+    let buffer = "";
+    const onData = (chunk) => {
+      buffer += chunk.toString("utf8");
+      const lines = buffer.split(/\r?\n/).filter(Boolean);
+      const last = lines[lines.length - 1] || "";
+      if (!/^\d{3}[ -]/.test(last)) return;
+      if (/^\d{3}-/.test(last)) return;
+      socket.off("data", onData);
+      if (!expect.test(last)) {
+        reject(new Error(last));
+        return;
+      }
+      resolve(buffer);
+    };
+    socket.on("data", onData);
+    if (command) socket.write(`${command}\r\n`);
+  });
+}
 
-  if (suggestion.length < 3) {
-    sendJson(response, 400, { ok: false, error: "Add a suggestion of at least 3 characters." });
-    return;
+function encodeBase64(value) {
+  return Buffer.from(String(value), "utf8").toString("base64");
+}
+
+function formatEmailMessage(suggestion) {
+  const subject = `Cork Event Radar suggestion: ${suggestion.text.slice(0, 70)}`;
+  const body = [
+    "A visitor submitted a desired event/activity for Cork Event Radar.",
+    "",
+    `Suggestion: ${suggestion.text}`,
+    `Submitted: ${suggestion.createdAt}`,
+    `Page: ${suggestion.referer || "unknown"}`,
+    `User agent: ${suggestion.userAgent || "unknown"}`,
+    "",
+    "Manual next step:",
+    "1. Find a reliable source page for this activity or venue.",
+    "2. Add it to manual-sources.json.",
+    "3. Commit, push, and redeploy.",
+  ].join("\n");
+  return [
+    `From: ${SMTP_FROM}`,
+    `To: ${SUGGESTION_EMAIL_TO}`,
+    `Subject: ${subject}`,
+    "Content-Type: text/plain; charset=utf-8",
+    "",
+    body,
+  ].join("\r\n");
+}
+
+async function sendSuggestionEmail(suggestion) {
+  if (!SMTP_HOST || !SUGGESTION_EMAIL_TO || !SMTP_FROM) return { sent: false, reason: "Email is not configured." };
+
+  let socket = SMTP_SECURE
+    ? tls.connect({ host: SMTP_HOST, port: SMTP_PORT, servername: SMTP_HOST })
+    : net.connect({ host: SMTP_HOST, port: SMTP_PORT });
+
+  await smtpCommand(socket, null);
+  await smtpCommand(socket, `EHLO ${SMTP_HOST}`);
+
+  if (!SMTP_SECURE) {
+    await smtpCommand(socket, "STARTTLS", /^220/);
+    socket = tls.connect({ socket, servername: SMTP_HOST });
+    await smtpCommand(socket, `EHLO ${SMTP_HOST}`);
   }
 
-  const plan = await planSuggestion(suggestion, area === "all" ? "county" : area);
-  sendJson(response, 200, {
-    ok: true,
-    openaiConfigured: Boolean(OPENAI_API_KEY),
-    model: OPENAI_MODEL,
-    plan,
-  });
+  if (SMTP_USER && SMTP_PASS) {
+    await smtpCommand(socket, "AUTH LOGIN", /^334/);
+    await smtpCommand(socket, encodeBase64(SMTP_USER), /^334/);
+    await smtpCommand(socket, encodeBase64(SMTP_PASS), /^235/);
+  }
+
+  await smtpCommand(socket, `MAIL FROM:<${SMTP_FROM}>`);
+  await smtpCommand(socket, `RCPT TO:<${SUGGESTION_EMAIL_TO}>`);
+  await smtpCommand(socket, "DATA", /^354/);
+  await smtpCommand(socket, `${formatEmailMessage(suggestion)}\r\n.`, /^250/);
+  await smtpCommand(socket, "QUIT", /^221/).catch(() => {});
+  socket.end();
+  return { sent: true };
 }
 
 async function handleSuggest(request, response) {
   const body = await readRequestJson(request);
-  const suggestion = cleanText(body.suggestion || "");
-  const area = ["west-cork", "city", "county", "all"].includes(body.area) ? body.area : "county";
-  const normalizedArea = area === "all" ? "county" : area;
+  const text = cleanText(body.suggestion || "");
 
-  if (suggestion.length < 3) {
-    sendJson(response, 400, { ok: false, error: "Suggestion is too short." });
+  if (text.length < 3) {
+    sendJson(response, 400, { ok: false, error: "Enter an activity, event type, venue, or listings page." });
     return;
   }
 
-  const learning = readLearningState();
-  const parts = splitSuggestions(suggestion);
-  const accepted = [];
-  const rejected = [];
+  const suggestion = {
+    id: `sug_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    text,
+    status: "new",
+    createdAt: new Date().toISOString(),
+    referer: request.headers.referer || "",
+    userAgent: request.headers["user-agent"] || "",
+  };
 
-  for (const part of parts) {
-    const canonical = canonicalSuggestion(part, area);
-    if (canonical) {
-      mergeLearnedSource(
-        learning,
-        canonical,
-        {
-          title: `User suggested ${part}`,
-          source: "User suggestion",
-          url: canonical.url,
-          date: "",
-          seenAt: new Date().toISOString(),
-        }
-      );
-      const candidate = mergeCandidate(learning, {
-        name: canonical.name,
-        area: canonical.area,
-        category: canonical.category,
-        score: 10,
-        url: canonical.url,
-        evidenceTitle: `User suggested ${part}`,
-      });
-      accepted.push({ name: candidate.name, category: candidate.category, status: "learned-source", planner: "rule" });
-      continue;
-    }
-
-    const url = findSuggestionUrl(part);
-    const name = suggestionName(part, url);
-    const plan = await planSuggestion(part, normalizedArea);
-    const category = plan.category || inferCategory(part, "festival", "User suggestion");
-    const plannerFields = {
-      aliases: plan.aliases || [],
-      negativeTerms: plan.negativeTerms || [],
-      sourceHints: plan.sourceHints || [],
-      likelySourceTypes: plan.likelySourceTypes || [],
-      validationSignals: plan.validationSignals || [],
-      rejectionSignals: plan.rejectionSignals || [],
-      sourceTypes: plan.sourceTypes || [],
-      localityTerms: plan.localityTerms || [],
-      confidence: plan.confidence || "medium",
-      positiveQueries: plan.positiveQueries || [],
-      planner: plan.planner || "fallback",
-    };
-
-    if (url) {
-      const source = {
-        name: name || new URL(url).hostname,
-        url,
-        area: normalizedArea,
-        category,
-        searchTerm: plan.activity || name,
-        searchTerms: activityTermsFor(plan.activity || name, plan.aliases || []),
-        aliases: plan.aliases || [],
-        negativeTerms: plan.negativeTerms || [],
-        sourceHints: plan.sourceHints || [],
-        validationSignals: plan.validationSignals || [],
-        rejectionSignals: plan.rejectionSignals || [],
-        sourceTypes: plan.sourceTypes || [],
-        localityTerms: plan.localityTerms || [],
-        learned: true,
-      };
-      const validation = await testSuggestedSource(source);
-      const test = validation.result;
-      const learnedSource = validation.source;
-
-      if (!test.events.length) {
-        mergeLearnedSource(
-          learning,
-          learnedSource,
-          {
-            title: test.ok
-              ? "User suggested a source URL without clear event markup"
-              : `User suggested a source URL that could not be fetched automatically: ${test.error || "unknown error"}`,
-            source: "User suggestion",
-            url: learnedSource.url,
-            date: "",
-            seenAt: new Date().toISOString(),
-          }
-        );
-        const candidate = mergeCandidate(learning, {
-          name,
-          area: normalizedArea,
-          category,
-          ...plannerFields,
-          score: test.ok ? 5 : 4,
-          url: learnedSource.url,
-          evidenceTitle: test.ok
-            ? "User suggested a fetchable URL without clear event markup"
-            : "User suggested a URL retained for future scanning",
-        });
-        accepted.push({
-          name: candidate.name,
-          category: candidate.category,
-          status: test.ok ? "learned-source" : "watchlist-source",
-          planner: plan.planner || "fallback",
-        });
-        continue;
-      }
-
-      mergeLearnedSource(
-        learning,
-        learnedSource,
-        {
-          title: test.events[0].title || "Validated event listing",
-          source: "User suggestion",
-          url: learnedSource.url,
-          date: test.events[0].startDate || "",
-          seenAt: new Date().toISOString(),
-        }
-      );
-      const candidate = mergeCandidate(learning, {
-        name,
-        area: normalizedArea,
-        category,
-        ...plannerFields,
-        score: 8 + Math.min(6, test.events.length),
-        url: learnedSource.url,
-        evidenceTitle: `${test.events.length} event record(s) found during validation`,
-      });
-      accepted.push({ name: candidate.name, category: candidate.category, status: "learned-source", planner: plan.planner || "fallback" });
-      continue;
-    }
-
-    if (!isUsefulVenueName(name)) {
-      rejected.push({
-        suggestion: part,
-        error: "Not specific enough. Try a venue, bar, festival, or direct listings URL.",
-      });
-      continue;
-    }
-
-    const candidate = mergeCandidate(learning, {
-      name,
-      area: normalizedArea,
-      category,
-      ...plannerFields,
-      score: 7,
-      evidenceTitle: plan.planner === "openai" ? "LLM planned activity/source discovery" : "User suggested venue/event search requisite",
-    });
-    accepted.push({ name: candidate.name, category: candidate.category, status: "candidate", planner: plan.planner || "fallback" });
+  const inbox = readSuggestionInbox();
+  const saved = writeSuggestionInbox([suggestion, ...inbox].slice(0, 500));
+  let email = { sent: false, reason: "Email is not configured." };
+  try {
+    email = await sendSuggestionEmail(suggestion);
+  } catch (error) {
+    email = { sent: false, reason: error.message };
   }
 
-  if (!accepted.length) {
-    sendJson(response, 422, {
-      ok: false,
-      error: rejected[0]?.error || "No suggestions passed validation.",
-      rejected,
-      learning: topLearningSummary(learning),
-    });
-    return;
-  }
-
-  const saved = writeLearningState(learning);
-  const rejectedMessage = rejected.length ? ` ${rejected.length} item(s) need more detail.` : "";
-  const plannerUsed = accepted.find((item) => item.planner && item.planner !== "rule")?.planner || "";
-  const plannerMessage = plannerUsed ? ` Planner: ${plannerUsed === "openai" ? "OpenAI" : "fallback"}.` : "";
   sendJson(response, 200, {
     ok: true,
-    status: accepted.some((item) => item.status === "learned-source") ? "learned-source" : "candidate",
-    message: `Accepted ${accepted.map((item) => `"${item.name}" as ${categoryLabel(item.category)}`).join(", ")}.${plannerMessage}${rejectedMessage}`,
-    accepted,
-    rejected,
-    learning: topLearningSummary(saved),
+    message: email.sent
+      ? "Thanks. Your suggestion has been sent for review."
+      : "Thanks. Your suggestion has been saved for review.",
+    suggestion,
+    email,
+    suggestionCount: saved.suggestions.length,
+    learning: topLearningSummary(readLearningState()),
   });
-  return;
 }
 
 function serveStatic(request, response) {
@@ -2204,13 +1968,6 @@ function serveStatic(request, response) {
 const server = http.createServer((request, response) => {
   if (request.url.startsWith("/api/health")) {
     sendJson(response, 200, healthSummary());
-    return;
-  }
-
-  if (request.url.startsWith("/api/plan")) {
-    handleApiPlan(request, response).catch((error) => {
-      sendJson(response, 500, { ok: false, error: error.message });
-    });
     return;
   }
 

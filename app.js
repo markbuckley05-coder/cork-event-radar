@@ -349,15 +349,14 @@ function renderLearning() {
 
   if (!candidates.length) {
     const empty = document.createElement("span");
-    empty.textContent = "No learned candidates yet";
+    empty.textContent = "No source candidates yet";
     learningCandidates.append(empty);
     return;
   }
 
   candidates.forEach((candidate) => {
     const node = document.createElement("span");
-    const planner = candidate.planner ? ` · ${candidate.planner}` : "";
-    node.innerHTML = `<strong>${escapeHtml(candidate.name)}</strong> score ${escapeHtml(candidate.score)} · ${escapeHtml(candidate.area || "county")}${escapeHtml(planner)}`;
+    node.innerHTML = `<strong>${escapeHtml(candidate.name)}</strong> score ${escapeHtml(candidate.score)} · ${escapeHtml(candidate.area || "county")}`;
     learningCandidates.append(node);
   });
 }
@@ -468,8 +467,8 @@ async function submitSuggestion() {
   }
 
   suggestionButton.disabled = true;
-  suggestionButton.textContent = "Testing";
-  setSuggestionStatus("Testing suggestion against the learning model...");
+  suggestionButton.textContent = "Sending";
+  setSuggestionStatus("Sending your suggestion for review...");
 
   try {
     const response = await fetch("/api/suggest", {
@@ -481,7 +480,7 @@ async function submitSuggestion() {
       }),
     });
     const payload = await response.json();
-    if (!response.ok || !payload.ok) throw new Error(payload.error || "Suggestion failed validation.");
+    if (!response.ok || !payload.ok) throw new Error(payload.error || "Suggestion could not be sent.");
 
     state.learning = payload.learning || state.learning;
     suggestionInput.value = "";
@@ -491,7 +490,7 @@ async function submitSuggestion() {
     setSuggestionStatus(error.message || "Suggestion could not be added.", "error");
   } finally {
     suggestionButton.disabled = false;
-    suggestionButton.textContent = "Suggest";
+    suggestionButton.textContent = "Send suggestion";
   }
 }
 
@@ -524,7 +523,7 @@ async function scanSources() {
       "results",
       liveEvents.length ? "Results ready" : "Ready with starter results",
       liveEvents.length
-        ? `${liveEvents.length} live records · ${state.learning.candidateCount || 0} learned candidates - ${new Date().toLocaleString("en-IE", { dateStyle: "medium", timeStyle: "short" })}`
+        ? `${liveEvents.length} live records · ${state.learning.candidateCount || 0} source candidates - ${new Date().toLocaleString("en-IE", { dateStyle: "medium", timeStyle: "short" })}`
         : "No live records found"
     );
   } catch (error) {

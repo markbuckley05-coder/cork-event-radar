@@ -12,6 +12,7 @@ Create a new GitHub repository and upload these files:
 - `styles.css`
 - `app.js`
 - `server.js`
+- `manual-sources.json`
 - `package.json`
 - `USER_MANUAL.md`
 
@@ -32,18 +33,40 @@ Start Command: npm start
 
 Render will provide a public URL ending in `.onrender.com`.
 
-### 3. Optional LLM Planning
+### 3. Optional Suggestion Email
 
-The dashboard works without an LLM, but the **Teach the Engine** box is much smarter when an OpenAI API key is configured. In Render, open the service settings and add:
+The app does not use an LLM or OpenAI API key. Visitor suggestions are saved to `suggestions-inbox.json`. If you want those suggestions emailed to you, add SMTP settings in Render:
 
 ```text
-OPENAI_API_KEY=your OpenAI API key
-OPENAI_MODEL=gpt-4.1-mini
+SUGGESTION_EMAIL_TO=you@example.com
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=your smtp username
+SMTP_PASS=your smtp password
+SMTP_FROM=you@example.com
+SMTP_SECURE=false
 ```
 
-`OPENAI_MODEL` is optional. If it is not set, the app uses `gpt-4.1-mini`.
+For port `465`, set `SMTP_SECURE=true`. If email is not configured, suggestions are still saved for review.
 
-### 4. Test It
+### 4. Add Manual Sources
+
+To track a new activity or event type, add a source to `manual-sources.json`, commit, push, and redeploy. Example:
+
+```json
+{
+  "name": "Example Club Fixtures",
+  "url": "https://example.com/fixtures",
+  "area": "county",
+  "category": "sport",
+  "searchTerm": "volleyball",
+  "searchTerms": ["volleyball", "cork volleyball"]
+}
+```
+
+Supported categories include `food`, `festival`, `music`, `trad`, `sport`, `rugby`, `gaa`, `arts`, `family`, `agriculture`, and `markets`.
+
+### 5. Test It
 
 Open the Render URL and click **Enter** or **Scan Sources**.
 
@@ -54,7 +77,8 @@ The engine status should change from ready to running, then to results ready.
 - The app does not need a database.
 - The host must allow outbound HTTPS requests because the event scanner fetches public event pages.
 - Some event sites may block automated fetches. Those sources will show as failed in the scan, while the rest continue working.
-- The learning engine writes to `learned-sources.json`. This works locally. For a production deployment that must remember learning forever across host restarts/redeploys, move that state into a small database or persistent disk.
+- Visitor requests write to `suggestions-inbox.json`. For production storage across restarts/redeploys, use a persistent disk or a small database.
+- The deterministic scan can still write learned source hints to `learned-sources.json`, but public suggestions no longer add sources automatically.
 
 ## Alternative: Railway
 
