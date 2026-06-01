@@ -59,6 +59,14 @@ Add this Render environment variable before sharing the admin page:
 ADMIN_TOKEN=choose-a-private-password
 ```
 
+For better source discovery, add a Brave Search API key:
+
+```text
+BRAVE_SEARCH_API_KEY=your_brave_search_api_key
+```
+
+Without this key, the admin builder falls back to scraping public search-result pages, which can be unreliable on Render. With the key, it searches Cork-shaped queries, scores local relevance, and then shows you candidate links to approve.
+
 Approved sources are saved to `approved-sources.json` at runtime and are used by future scans without a GitHub push or Render redeploy.
 
 For sources to survive Render restarts/redeploys, attach a Render persistent disk and set:

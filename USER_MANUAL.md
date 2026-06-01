@@ -95,6 +95,8 @@ Open `/admin.html` to review suggestions and investigate new source candidates. 
 
 Approved sources are used by future scans without changing GitHub or redeploying Render. On Render, use `ADMIN_TOKEN` to protect the admin page and `DATA_DIR` with a persistent disk if you want runtime approvals to survive redeploys.
 
+For stronger admin investigations, configure `BRAVE_SEARCH_API_KEY` in Render. The admin builder uses it to search Cork-focused queries, score regional relevance, and inspect likely source pages before showing candidates. Without it, the admin builder uses a public search fallback that may be less reliable.
+
 To add new coverage manually, edit `manual-sources.json`, add a reliable source page with a category, area, and optional search terms, then commit, push, and redeploy.
 
 ## Live Scanning

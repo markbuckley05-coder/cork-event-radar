@@ -12,6 +12,7 @@ const MANUAL_SOURCES_FILE = path.join(ROOT, "manual-sources.json");
 const APPROVED_SOURCES_FILE = path.join(DATA_ROOT, "approved-sources.json");
 const SUGGESTIONS_FILE = path.join(DATA_ROOT, "suggestions-inbox.json");
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "";
+const BRAVE_SEARCH_API_KEY = process.env.BRAVE_SEARCH_API_KEY || "";
 const SUGGESTION_EMAIL_TO = process.env.SUGGESTION_EMAIL_TO || "";
 const SMTP_HOST = process.env.SMTP_HOST || "";
 const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
@@ -1066,6 +1067,29 @@ function isRelevantDiscoveredSource(text, source) {
   return activitySignal && corkSignal && (sourceSignal || source.category === "sport");
 }
 
+function localityScore(text, source) {
+  const haystack = normalizeSearchText(text);
+  const localityTerms = source.localityTerms?.length ? source.localityTerms : ["cork", "cork city", "county cork", "west cork", "munster"];
+  return localityTerms.reduce((score, term) => score + (matchesTerm(haystack, term) ? 12 : 0), 0);
+}
+
+function candidateSourceScore(text, source) {
+  const haystack = normalizeSearchText(text);
+  const terms = source.searchTerms?.length ? source.searchTerms : activityTermsFor(source.searchTerm);
+  const validationSignals = source.validationSignals?.length
+    ? source.validationSignals
+    : ["fixtures", "results", "matches", "events", "club", "league", "calendar", "whats on", "tickets"];
+  const activity = terms.reduce((score, term) => score + (matchesTerm(haystack, term) ? 10 : 0), 0);
+  const locality = localityScore(haystack, source);
+  const sourceIntent = validationSignals.reduce((score, term) => score + (matchesTerm(haystack, term) ? 4 : 0), 0);
+  const penalty = isNegativeActivityMatch(haystack, source) ? 40 : 0;
+  return activity + locality + sourceIntent - penalty;
+}
+
+function isRegionalCandidate(text, source) {
+  return localityScore(text, source) > 0 && candidateSourceScore(text, source) >= 18;
+}
+
 function isNegativeActivityMatch(haystack, source) {
   if ([...(source.negativeTerms || []), ...(source.rejectionSignals || [])].some((term) => matchesTerm(haystack, term))) return true;
   const term = normalizeSearchText(source.searchTerm || source);
@@ -1157,6 +1181,112 @@ async function fetchHtml(url, accept = "text/html,application/xhtml+xml,applicat
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function searchBrave(query) {
+  if (!BRAVE_SEARCH_API_KEY) return { provider: "brave", ok: false, skipped: true, error: "BRAVE_SEARCH_API_KEY is not configured.", links: [] };
+  const url = new URL("https://api.search.brave.com/res/v1/web/search");
+  url.searchParams.set("q", query);
+  url.searchParams.set("count", "10");
+  url.searchParams.set("country", "ie");
+  url.searchParams.set("search_lang", "en");
+  url.searchParams.set("safesearch", "moderate");
+  url.searchParams.set("spellcheck", "1");
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        accept: "application/json",
+        "x-subscription-token": BRAVE_SEARCH_API_KEY,
+      },
+    });
+    if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+    const payload = await response.json();
+    const links = (payload.web?.results || [])
+      .map((result) => ({
+        url: result.url,
+        title: cleanText(result.title || ""),
+        description: cleanText(result.description || ""),
+        source: "Brave Search",
+      }))
+      .filter((result) => result.url);
+    return { provider: "brave", ok: true, query, count: links.length, links };
+  } catch (error) {
+    return { provider: "brave", ok: false, query, error: error.message, links: [] };
+  }
+}
+
+async function searchDuckDuckGo(query) {
+  const url = `https://duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+  try {
+    const html = await fetchHtml(url);
+    const links = extractDiscoveryLinks(html, url).map((resultUrl) => ({
+      url: resultUrl,
+      title: sourceNameFromPage(resultUrl, "", query),
+      description: "",
+      source: "DuckDuckGo fallback",
+    }));
+    return { provider: "duckduckgo", ok: true, query, count: links.length, links };
+  } catch (error) {
+    return { provider: "duckduckgo", ok: false, query, error: error.message, links: [] };
+  }
+}
+
+async function discoverSourceLinks(queries, sourceTemplate) {
+  const attempts = [];
+  const allLinks = [];
+
+  for (const query of queries) {
+    const primary = await searchBrave(query);
+    attempts.push({
+      provider: primary.provider,
+      query,
+      ok: primary.ok,
+      skipped: Boolean(primary.skipped),
+      error: primary.error || "",
+      count: primary.links.length,
+    });
+    allLinks.push(...primary.links);
+
+    if (!primary.ok || primary.links.length < 2) {
+      const fallback = await searchDuckDuckGo(query);
+      attempts.push({
+        provider: fallback.provider,
+        query,
+        ok: fallback.ok,
+        error: fallback.error || "",
+        count: fallback.links.length,
+      });
+      allLinks.push(...fallback.links);
+    }
+  }
+
+  const seen = new Set();
+  const links = allLinks
+    .filter((link) => link?.url)
+    .filter((link) => {
+      try {
+        const target = new URL(link.url);
+        const host = target.hostname.replace(/^www\./, "");
+        if (/duckduckgo\.com|google\.com|bing\.com|facebook\.com|instagram\.com|youtube\.com|x\.com|twitter\.com/i.test(host)) return false;
+        if (!/^https?:$/i.test(target.protocol)) return false;
+      } catch {
+        return false;
+      }
+      const key = normalizeSearchText(link.url);
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .map((link) => ({
+      ...link,
+      score: candidateSourceScore([link.title, link.description, link.url].join(" "), sourceTemplate),
+    }))
+    .filter((link) => isRegionalCandidate([link.title, link.description, link.url].join(" "), sourceTemplate))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 12);
+
+  return { attempts, links };
 }
 
 function discoverySourceFields(source, url) {
@@ -1526,6 +1656,7 @@ function healthSummary() {
   return {
     ok: true,
     aiEnabled: false,
+    searchDiscovery: BRAVE_SEARCH_API_KEY ? "brave" : "fallback",
     manualSourceCount: readManualSources().length,
     approvedSourceCount: readApprovedSources().length,
     suggestionCount: suggestions.length,
@@ -1699,26 +1830,14 @@ function fallbackSourceCandidatesForPlan(plan) {
   ];
 
   if (category === "sport") {
-    common.unshift(
-      {
-        name: `Cork Sports Partnership search: ${plan.activity}`,
-        url: `https://www.corksports.ie/?s=${query}`,
-        area: "county",
-        category,
-        searchTerm: plan.activity,
-        reason: "Generated local sports directory search",
-      }
-    );
-    if (matchesTerm(plan.activity, "basketball")) {
-      common.unshift({
-        name: `Basketball Ireland search: ${plan.activity}`,
-        url: `https://ireland.basketball/?s=${query}`,
-        area: "county",
-        category,
-        searchTerm: plan.activity,
-        reason: "Generated national governing body search",
-      });
-    }
+    common.unshift({
+      name: `Cork Sports Partnership search: ${plan.activity}`,
+      url: `https://www.corksports.ie/?s=${query}`,
+      area: "county",
+      category,
+      searchTerm: plan.activity,
+      reason: "Generated local sports directory search",
+    });
   }
 
   return common.map((candidate) =>
@@ -1761,22 +1880,10 @@ async function investigateSuggestionText(text) {
       }
     : null;
 
-  const searchUrls = activityDiscoveryQueries({ name: plan.activity, category: plan.category, area: "county" })
-    .slice(0, 5)
-    .map((query) => `https://duckduckgo.com/html/?q=${encodeURIComponent(query)}`);
-  const foundUrls = [];
-  const searchAttempts = [];
-
-  for (const url of searchUrls) {
-    try {
-      const html = await fetchHtml(url);
-      const links = extractDiscoveryLinks(html, url);
-      foundUrls.push(...links);
-      searchAttempts.push({ url, ok: true, count: links.length });
-    } catch (error) {
-      searchAttempts.push({ url, ok: false, error: error.message, count: 0 });
-    }
-  }
+  const queries = activityDiscoveryQueries({ name: plan.activity, category: plan.category, area: "county" }).slice(0, 5);
+  const discovered = await discoverSourceLinks(queries, sourceTemplate);
+  const foundUrls = discovered.links.map((link) => link.url);
+  const searchAttempts = discovered.attempts;
 
   const seen = new Set();
   const uniqueUrls = [direct?.url, ...foundUrls]
@@ -1832,7 +1939,8 @@ async function investigateSuggestionText(text) {
     planner: {
       activity: plan.activity,
       category: plan.category,
-      queries: activityDiscoveryQueries({ name: plan.activity, category: plan.category, area: "county" }).slice(0, 5),
+      queries,
+      searchProvider: BRAVE_SEARCH_API_KEY ? "Brave Search API" : "DuckDuckGo fallback",
     },
     searchAttempts,
     candidates,
