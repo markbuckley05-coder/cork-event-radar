@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cork Event Radar Admin</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="admin-main">
+      <header class="topbar">
+        <div>
+          <p class="production-credit">A BuckMark Production</p>
+          <p class="eyebrow">Admin source builder</p>
+          <h2>Review suggested coverage</h2>
+        </div>
+        <a class="event-link" href="/">Back to dashboard</a>
+      </header>
+
+      <section class="admin-panel">
+        <div>
+          <p class="eyebrow">Access</p>
+          <h3>Admin token</h3>
+        </div>
+        <div class="admin-token-row">
+          <input id="adminToken" type="password" placeholder="Only needed if ADMIN_TOKEN is set in Render" />
+          <button id="saveToken" class="secondary-action" type="button">Save token</button>
+        </div>
+      </section>
+
+      <section class="admin-panel">
+        <div>
+          <p class="eyebrow">Manual investigation</p>
+          <h3>Search for source candidates</h3>
+        </div>
+        <div class="suggestion-fields">
+          <textarea id="manualInvestigation" rows="3" placeholder="Example: volleyball, hill walking, art house cinema, or https://example.com/events"></textarea>
+          <button id="manualInvestigateButton" class="enter-action" type="button">Investigate</button>
+        </div>
+      </section>
+
+      <section class="admin-panel">
+        <div>
+          <p class="eyebrow">Inbox</p>
+          <h3>Visitor suggestions</h3>
+        </div>
+        <div id="suggestionAdminList" class="admin-list"></div>
+      </section>
+
+      <section class="admin-panel">
+        <div>
+          <p class="eyebrow">Candidate sources</p>
+          <h3>Tick useful links, then approve</h3>
+        </div>
+        <div>
+          <p id="adminStatus" class="suggestion-status" role="status" aria-live="polite"></p>
+          <div id="candidateList" class="admin-list"></div>
+          <button id="approveSourcesButton" class="enter-action" type="button">Approve checked sources</button>
+        </div>
+      </section>
+
+      <section class="admin-panel">
+        <div>
+          <p class="eyebrow">Live approved sources</p>
+          <h3>Used by future scans</h3>
+        </div>
+        <div id="approvedSourceList" class="admin-list"></div>
+      </section>
+    </main>
+
+    <script src="admin.js"></script>
+  </body>
+</html>

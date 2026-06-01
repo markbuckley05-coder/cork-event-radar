@@ -25,7 +25,8 @@ body {
 }
 
 button,
-input {
+input,
+textarea {
   font: inherit;
 }
 
@@ -578,11 +579,93 @@ main {
   text-align: center;
 }
 
+.admin-main {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.admin-panel {
+  display: grid;
+  grid-template-columns: minmax(180px, 280px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.admin-panel h3,
+.admin-panel p {
+  margin: 0;
+}
+
+.admin-token-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.admin-token-row input {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 11px 12px;
+}
+
+.admin-list {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-item,
+.admin-candidate {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #fbfcfd;
+}
+
+.admin-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-item p,
+.admin-candidate small,
+.admin-candidate em {
+  color: var(--muted);
+}
+
+.admin-item a,
+.admin-candidate a {
+  color: var(--blue);
+  overflow-wrap: anywhere;
+}
+
+.admin-candidate {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  cursor: pointer;
+}
+
+.admin-candidate input {
+  margin-top: 4px;
+}
+
+.admin-candidate span {
+  display: grid;
+  gap: 4px;
+}
+
 @media (max-width: 980px) {
   .app-shell,
   .source-strip,
   .learning-strip,
   .suggestion-panel,
+  .admin-panel,
   .filters {
     grid-template-columns: 1fr;
   }
@@ -616,7 +699,9 @@ main {
 
   .metrics,
   .event-card,
-  .suggestion-actions {
+  .suggestion-actions,
+  .admin-token-row,
+  .admin-item {
     grid-template-columns: 1fr;
   }
 

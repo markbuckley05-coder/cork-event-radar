@@ -84,6 +84,17 @@ Visitors can request coverage from the dashboard. Use the **Enter desired event 
 
 Suggestions are saved to `suggestions-inbox.json`, and can also be emailed to the site owner when SMTP settings are configured. Public suggestions do not automatically change the scraper.
 
+## Admin approval
+
+Open `/admin.html` to review suggestions and investigate new source candidates. The page lets you:
+
+- view visitor suggestions
+- investigate a term such as `volleyball`, `hill walking`, or `art house cinema`
+- tick useful Cork-relevant source links
+- approve them into `approved-sources.json`
+
+Approved sources are used by future scans without changing GitHub or redeploying Render. On Render, use `ADMIN_TOKEN` to protect the admin page and `DATA_DIR` with a persistent disk if you want runtime approvals to survive redeploys.
+
 To add new coverage manually, edit `manual-sources.json`, add a reliable source page with a category, area, and optional search terms, then commit, push, and redeploy.
 
 ## Live Scanning
@@ -133,6 +144,7 @@ Always open the source before booking or travelling, because event times, venues
 - `manual-sources.json`: manually managed source list for activities, venues, fixtures, and listing pages
 - `learned-sources.json`: generated learning memory for venue/source candidates
 - `suggestions-inbox.json`: runtime visitor requests, ignored by Git
+- `approved-sources.json`: runtime admin-approved sources, ignored by Git
 - `package.json`: deployment/start metadata for Node hosts
 - `DEPLOYMENT.md`: online deployment checklist
 - `USER_MANUAL.md`: this guide

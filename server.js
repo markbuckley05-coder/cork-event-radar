@@ -6,9 +6,12 @@ const tls = require("tls");
 
 const PORT = Number(process.env.PORT || 4173);
 const ROOT = __dirname;
+const DATA_ROOT = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : ROOT;
 const LEARNING_FILE = path.join(ROOT, "learned-sources.json");
 const MANUAL_SOURCES_FILE = path.join(ROOT, "manual-sources.json");
-const SUGGESTIONS_FILE = path.join(ROOT, "suggestions-inbox.json");
+const APPROVED_SOURCES_FILE = path.join(DATA_ROOT, "approved-sources.json");
+const SUGGESTIONS_FILE = path.join(DATA_ROOT, "suggestions-inbox.json");
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "";
 const SUGGESTION_EMAIL_TO = process.env.SUGGESTION_EMAIL_TO || "";
 const SMTP_HOST = process.env.SMTP_HOST || "";
 const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
@@ -16,6 +19,10 @@ const SMTP_USER = process.env.SMTP_USER || "";
 const SMTP_PASS = process.env.SMTP_PASS || "";
 const SMTP_FROM = process.env.SMTP_FROM || SMTP_USER || SUGGESTION_EMAIL_TO;
 const SMTP_SECURE = String(process.env.SMTP_SECURE || "").toLowerCase() === "true" || SMTP_PORT === 465;
+
+function ensureDataRoot() {
+  if (!fs.existsSync(DATA_ROOT)) fs.mkdirSync(DATA_ROOT, { recursive: true });
+}
 
 const seedSources = [
   { name: "Pure Cork", url: "https://www.purecork.ie/whats-on", area: "county", category: "festival" },
@@ -96,6 +103,27 @@ function readManualSources() {
   }
 }
 
+function readApprovedSources() {
+  try {
+    const raw = fs.readFileSync(APPROVED_SOURCES_FILE, "utf8");
+    const parsed = JSON.parse(raw);
+    const sources = Array.isArray(parsed) ? parsed : parsed.sources;
+    return Array.isArray(sources) ? sources.filter((source) => source?.name && source?.url) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeApprovedSources(sources) {
+  ensureDataRoot();
+  const payload = {
+    sources,
+    updatedAt: new Date().toISOString(),
+  };
+  fs.writeFileSync(APPROVED_SOURCES_FILE, `${JSON.stringify(payload, null, 2)}\n`);
+  return payload;
+}
+
 function readSuggestionInbox() {
   try {
     const raw = fs.readFileSync(SUGGESTIONS_FILE, "utf8");
@@ -107,6 +135,7 @@ function readSuggestionInbox() {
 }
 
 function writeSuggestionInbox(suggestions) {
+  ensureDataRoot();
   const payload = {
     suggestions,
     updatedAt: new Date().toISOString(),
@@ -207,7 +236,7 @@ function activityCandidateFromQuery(query) {
 
 function getActiveSources(searchQuery = "") {
   const learning = readLearningState();
-  const manualSources = readManualSources().map((source) => ({
+  const manualSources = [...readManualSources(), ...readApprovedSources()].map((source) => ({
     name: source.name,
     url: source.url,
     area: source.area || "county",
@@ -341,13 +370,25 @@ function sendJson(response, status, data) {
   send(response, status, JSON.stringify(data, null, 2), { "content-type": "application/json; charset=utf-8" });
 }
 
+function adminTokenFrom(request) {
+  const url = new URL(request.url, `http://${request.headers.host}`);
+  return request.headers["x-admin-token"] || url.searchParams.get("token") || "";
+}
+
+function requireAdmin(request, response) {
+  if (!ADMIN_TOKEN) return true;
+  if (adminTokenFrom(request) === ADMIN_TOKEN) return true;
+  sendJson(response, 401, { ok: false, error: "Admin token required." });
+  return false;
+}
+
 function readRequestJson(request) {
   return new Promise((resolve, reject) => {
     let body = "";
     request.on("data", (chunk) => {
       body += chunk;
-      if (body.length > 16_384) {
-        reject(new Error("Suggestion is too long."));
+      if (body.length > 131_072) {
+        reject(new Error("Request is too long."));
         request.destroy();
       }
     });
@@ -638,12 +679,15 @@ function inferCategory(text, fallback, sourceName = "") {
         "triathlon",
         "marathon",
         "parkrun",
+        "hill walking",
+        "hiking",
+        "walking club",
       ],
     ],
     ["music", ["music", "gig", "concert", "jazz", "band", "dj", "chamber", "folk club"]],
     ["agriculture", ["agriculture", "agri", "farm", "cattle", "ploughing"]],
     ["family", ["family", "children", "kids"]],
-    ["arts", ["theatre", "theater", "opera", "comedy", "arts", "film", "exhibition", "kabuki", "drama", "dance performance"]],
+    ["arts", ["theatre", "theater", "opera", "comedy", "arts", "film", "cinema", "art house", "arthouse", "exhibition", "kabuki", "drama", "dance performance"]],
     ["festival", ["festival", "fest"]],
   ];
   const match = tests.find(([, words]) => words.some((word) => matchesTerm(haystack, word)));
@@ -1483,6 +1527,7 @@ function healthSummary() {
     ok: true,
     aiEnabled: false,
     manualSourceCount: readManualSources().length,
+    approvedSourceCount: readApprovedSources().length,
     suggestionCount: suggestions.length,
     learnedSourceCount: learning.learnedSources.length,
     candidateCount: learning.candidates.length,
@@ -1568,6 +1613,148 @@ async function testSuggestedSource(source) {
       events: [],
     },
     attempts,
+  };
+}
+
+function sourceFromCandidate(candidate) {
+  const name = cleanText(candidate.name || suggestionName(candidate.url || "", candidate.url || ""));
+  const url = cleanText(candidate.url || "");
+  const category = normalizePlannerCategory(candidate.category || inferCategory(name, "festival", name), "festival");
+  return {
+    name,
+    url,
+    area: ["west-cork", "city", "county"].includes(candidate.area) ? candidate.area : "county",
+    category,
+    searchTerm: cleanText(candidate.searchTerm || ""),
+    searchTerms: dedupeStrings(candidate.searchTerms || [], 12),
+    aliases: dedupeStrings(candidate.aliases || [], 12),
+    negativeTerms: dedupeStrings(candidate.negativeTerms || [], 12),
+    validationSignals: dedupeStrings(candidate.validationSignals || [], 12),
+    rejectionSignals: dedupeStrings(candidate.rejectionSignals || [], 12),
+    localityTerms: dedupeStrings(candidate.localityTerms || [], 10),
+  };
+}
+
+function adminSourceSummary(source) {
+  return {
+    name: source.name,
+    url: source.url,
+    area: source.area || "county",
+    category: source.category || "festival",
+    searchTerm: source.searchTerm || "",
+  };
+}
+
+function directSourceCandidateFromUrl(text, area = "county") {
+  const url = findSuggestionUrl(text);
+  if (!url) return null;
+  const name = suggestionName(text, url);
+  const category = inferCategory(text, "festival", name);
+  const plan = fallbackSuggestionPlan(name, area);
+  return {
+    name,
+    url,
+    area,
+    category,
+    searchTerm: isActivitySearchPrompt(name, category) ? name : "",
+    searchTerms: plan.positiveQueries ? activityTermsFor(name, plan.aliases) : [],
+    aliases: plan.aliases,
+    negativeTerms: plan.negativeTerms,
+    validationSignals: plan.validationSignals,
+    rejectionSignals: plan.rejectionSignals,
+    localityTerms: plan.localityTerms,
+    reason: "Direct URL supplied",
+  };
+}
+
+async function investigateSuggestionText(text) {
+  const activity = cleanText(text);
+  const direct = directSourceCandidateFromUrl(activity);
+  const plan = fallbackSuggestionPlan(activity, "county");
+  const sourceTemplate = {
+    name: `Admin discovery: ${plan.activity}`,
+    area: "county",
+    category: plan.category,
+    searchTerm: plan.activity,
+    searchTerms: activityTermsFor(plan.activity, plan.aliases),
+    aliases: plan.aliases,
+    negativeTerms: plan.negativeTerms,
+    validationSignals: plan.validationSignals,
+    rejectionSignals: plan.rejectionSignals,
+    localityTerms: plan.localityTerms,
+    sourceHints: plan.sourceHints,
+    likelySourceTypes: plan.likelySourceTypes,
+    sourceTypes: plan.sourceTypes,
+  };
+  const directTemplate = direct
+    ? {
+        ...sourceTemplate,
+        ...sourceFromCandidate(direct),
+        learnedSearch: Boolean(direct.searchTerm),
+      }
+    : null;
+
+  const searchUrls = activityDiscoveryQueries({ name: plan.activity, category: plan.category, area: "county" })
+    .slice(0, 5)
+    .map((query) => `https://duckduckgo.com/html/?q=${encodeURIComponent(query)}`);
+  const foundUrls = [];
+
+  for (const url of searchUrls) {
+    try {
+      const html = await fetchHtml(url);
+      foundUrls.push(...extractDiscoveryLinks(html, url));
+    } catch {
+      // Search providers can throttle; keep any links already found.
+    }
+  }
+
+  const seen = new Set();
+  const uniqueUrls = [direct?.url, ...foundUrls]
+    .filter(Boolean)
+    .filter((url) => {
+      const key = normalizeSearchText(url);
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 10);
+
+  const inspections = await Promise.all(
+    uniqueUrls.map(async (url) => {
+      const template = directTemplate && sourceIdentity({ url }) === sourceIdentity(directTemplate) ? directTemplate : sourceTemplate;
+      const result = await inspectDiscoveredUrl(template, { url, reason: `Found while investigating ${plan.activity}` });
+      if (result.source) return result;
+      const fallbackSource = sourceFromCandidate({
+        ...template,
+        name: sourceNameFromPage(url, "", plan.activity),
+        url,
+      });
+      return { events: [], source: fallbackSource };
+    })
+  );
+
+  const candidates = inspections
+    .filter((item) => item.source)
+    .map((item, index) => ({
+      ...sourceFromCandidate(item.source),
+      id: `cand_${index}_${Buffer.from(item.source.url).toString("base64url").slice(0, 12)}`,
+      eventCount: item.events?.length || 0,
+      sampleEvents: (item.events || []).slice(0, 3).map((event) => ({
+        title: event.title,
+        date: event.startDate,
+        location: event.location,
+      })),
+    }));
+
+  return {
+    ok: true,
+    suggestion: activity,
+    planner: {
+      activity: plan.activity,
+      category: plan.category,
+      queries: activityDiscoveryQueries({ name: plan.activity, category: plan.category, area: "county" }).slice(0, 5),
+    },
+    candidates,
   };
 }
 
@@ -1944,12 +2131,81 @@ async function handleSuggest(request, response) {
   });
 }
 
+function adminSuggestionsPayload() {
+  return {
+    ok: true,
+    suggestions: readSuggestionInbox(),
+    approvedSources: readApprovedSources().map(adminSourceSummary),
+    adminProtected: Boolean(ADMIN_TOKEN),
+  };
+}
+
+async function handleAdminSuggestions(request, response) {
+  if (!requireAdmin(request, response)) return;
+  sendJson(response, 200, adminSuggestionsPayload());
+}
+
+async function handleAdminInvestigate(request, response) {
+  if (!requireAdmin(request, response)) return;
+  const body = await readRequestJson(request);
+  const text = cleanText(body.suggestion || body.text || "");
+  if (text.length < 3) {
+    sendJson(response, 400, { ok: false, error: "Enter a suggestion to investigate." });
+    return;
+  }
+  const result = await investigateSuggestionText(text);
+  sendJson(response, 200, result);
+}
+
+async function handleAdminApprove(request, response) {
+  if (!requireAdmin(request, response)) return;
+  const body = await readRequestJson(request);
+  const incomingSources = Array.isArray(body.sources) ? body.sources : [];
+  const approved = readApprovedSources();
+  const seen = new Set(approved.map(sourceIdentity));
+  const added = [];
+
+  incomingSources.map(sourceFromCandidate).forEach((source) => {
+    const key = sourceIdentity(source);
+    if (!source.name || !source.url || !key || seen.has(key)) return;
+    seen.add(key);
+    added.push({
+      ...source,
+      approvedAt: new Date().toISOString(),
+      approvedBy: "admin",
+    });
+  });
+
+  const saved = writeApprovedSources([...added, ...approved].slice(0, 500));
+
+  if (body.suggestionId) {
+    const suggestions = readSuggestionInbox().map((suggestion) =>
+      suggestion.id === body.suggestionId
+        ? { ...suggestion, status: "approved", approvedAt: new Date().toISOString(), approvedCount: added.length }
+        : suggestion
+    );
+    writeSuggestionInbox(suggestions);
+  }
+
+  sendJson(response, 200, {
+    ok: true,
+    added,
+    approvedSourceCount: saved.sources.length,
+    message: added.length ? `${added.length} source${added.length === 1 ? "" : "s"} approved.` : "No new sources were added.",
+  });
+}
+
 function serveStatic(request, response) {
   const url = new URL(request.url, `http://${request.headers.host}`);
   const pathname = decodeURIComponent(url.pathname === "/" ? "/index.html" : url.pathname);
   const filePath = path.resolve(ROOT, `.${pathname}`);
 
   if (!filePath.startsWith(ROOT)) {
+    send(response, 403, "Forbidden", { "content-type": "text/plain; charset=utf-8" });
+    return;
+  }
+
+  if (["suggestions-inbox.json", "approved-sources.json"].includes(path.basename(filePath))) {
     send(response, 403, "Forbidden", { "content-type": "text/plain; charset=utf-8" });
     return;
   }
@@ -1984,6 +2240,39 @@ const server = http.createServer((request, response) => {
       return;
     }
     handleSuggest(request, response).catch((error) => {
+      sendJson(response, 500, { ok: false, error: error.message });
+    });
+    return;
+  }
+
+  if (request.url.startsWith("/api/admin/suggestions")) {
+    if (request.method !== "GET") {
+      sendJson(response, 405, { ok: false, error: "Use GET for admin suggestions." });
+      return;
+    }
+    handleAdminSuggestions(request, response).catch((error) => {
+      sendJson(response, 500, { ok: false, error: error.message });
+    });
+    return;
+  }
+
+  if (request.url.startsWith("/api/admin/investigate")) {
+    if (request.method !== "POST") {
+      sendJson(response, 405, { ok: false, error: "Use POST for investigation." });
+      return;
+    }
+    handleAdminInvestigate(request, response).catch((error) => {
+      sendJson(response, 500, { ok: false, error: error.message });
+    });
+    return;
+  }
+
+  if (request.url.startsWith("/api/admin/approve")) {
+    if (request.method !== "POST") {
+      sendJson(response, 405, { ok: false, error: "Use POST for approval." });
+      return;
+    }
+    handleAdminApprove(request, response).catch((error) => {
       sendJson(response, 500, { ok: false, error: error.message });
     });
     return;

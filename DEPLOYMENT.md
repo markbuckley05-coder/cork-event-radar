@@ -49,6 +49,24 @@ SMTP_SECURE=false
 
 For port `465`, set `SMTP_SECURE=true`. If email is not configured, suggestions are still saved for review.
 
+## Admin source approval
+
+The admin page is available at `/admin.html`. Use it to review visitor suggestions, investigate likely Cork source links, tick useful sources, and approve them into the live scanner.
+
+Add this Render environment variable before sharing the admin page:
+
+```text
+ADMIN_TOKEN=choose-a-private-password
+```
+
+Approved sources are saved to `approved-sources.json` at runtime and are used by future scans without a GitHub push or Render redeploy.
+
+For sources to survive Render restarts/redeploys, attach a Render persistent disk and set:
+
+```text
+DATA_DIR=/path/to/your/render/disk
+```
+
 ### 4. Add Manual Sources
 
 To track a new activity or event type, add a source to `manual-sources.json`, commit, push, and redeploy. Example:
@@ -78,6 +96,7 @@ The engine status should change from ready to running, then to results ready.
 - The host must allow outbound HTTPS requests because the event scanner fetches public event pages.
 - Some event sites may block automated fetches. Those sources will show as failed in the scan, while the rest continue working.
 - Visitor requests write to `suggestions-inbox.json`. For production storage across restarts/redeploys, use a persistent disk or a small database.
+- Admin-approved sources write to `approved-sources.json`. Use `DATA_DIR` with a persistent disk if you want these runtime approvals to survive redeploys.
 - The deterministic scan can still write learned source hints to `learned-sources.json`, but public suggestions no longer add sources automatically.
 
 ## Alternative: Railway
