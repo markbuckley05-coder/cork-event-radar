@@ -510,7 +510,6 @@ async function scanSources() {
       area: state.area,
       from: state.from,
       to: state.to,
-      categories: [...state.categories].join(","),
     });
     const response = await fetch(`/api/events?${params.toString()}`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);

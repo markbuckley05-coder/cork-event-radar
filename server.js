@@ -205,27 +205,7 @@ function activityCandidateFromQuery(query) {
   };
 }
 
-function parseCategoryFilter(value = "") {
-  return new Set(
-    String(value)
-      .split(",")
-      .map((item) => normalizeSearchText(item))
-      .filter(Boolean)
-  );
-}
-
-function categoryFilterIncludes(selected, category) {
-  if (!selected.size) return true;
-  if (selected.has(category)) return true;
-  if (selected.has("food") && category === "markets") return true;
-  return false;
-}
-
-function sourceMatchesCategoryFilter(source, selected) {
-  return categoryFilterIncludes(selected, source.category || "festival");
-}
-
-function getActiveSources(searchQuery = "", selectedCategories = new Set()) {
+function getActiveSources(searchQuery = "") {
   const learning = readLearningState();
   const manualSources = readManualSources().map((source) => ({
     name: source.name,
@@ -345,7 +325,6 @@ function getActiveSources(searchQuery = "", selectedCategories = new Set()) {
     });
   const seen = new Set();
   return [...seedSources, ...manualSources, ...learnedSources, ...activityDiscoverySources, ...candidateSearches].filter((source) => {
-    if (!sourceMatchesCategoryFilter(source, selectedCategories)) return false;
     const key = sourceIdentity(source);
     if (!key || seen.has(key)) return false;
     seen.add(key);
@@ -1823,8 +1802,7 @@ function learnFromScan(results) {
 
 async function handleApiEvents(request, response) {
   const url = new URL(request.url, `http://${request.headers.host}`);
-  const selectedCategories = parseCategoryFilter(url.searchParams.get("categories") || "");
-  const activeSources = getActiveSources(url.searchParams.get("q") || "", selectedCategories);
+  const activeSources = getActiveSources(url.searchParams.get("q") || "");
   const results = await Promise.all(activeSources.map(fetchSource));
   const learning = learnFromScan(results);
   const events = dedupe([...results.flatMap((result) => result.events), ...generatedMarketEvents()])
