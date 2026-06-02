@@ -59,12 +59,34 @@ assert(
       title: "Saltee Islands Puffin Boat Tour - Day Adventure from Cork",
       summary: "Wildlife boat tour from Cork.",
       location: "Cork",
-      url: "https://www.meetup.com/example",
+      url: "https://www.meetup.com/find/?keywords=hillwalking&location=ie--Cork&source=EVENTS",
       tags: ["sport", "hillwalking"],
     },
-    source
+    hillSource({
+      name: "Meetup Cork search: hillwalking",
+      url: "https://www.meetup.com/find/?keywords=hillwalking&location=ie--Cork&source=EVENTS",
+      searchTerm: "hillwalking",
+    })
   ),
-  "does not allow learned tags to make an unrelated event pass"
+  "does not allow learned tags or a search URL to make an unrelated event pass"
+);
+
+assert(
+  !learnedSearchTermMatches(
+    {
+      title: "City Walk 11 From Model Farm to Cork City Centre",
+      summary: "A relaxed city walk with cool people and coffee.",
+      location: "Cork City Council, City Hall",
+      url: "https://www.meetup.com/find/?keywords=hillwalking&location=ie--Cork&source=EVENTS",
+      tags: ["sport", "hillwalking"],
+    },
+    hillSource({
+      name: "Meetup Cork search: hillwalking",
+      url: "https://www.meetup.com/find/?keywords=hillwalking&location=ie--Cork&source=EVENTS",
+      searchTerm: "hillwalking",
+    })
+  ),
+  "does not treat a generic city walk as hill walking"
 );
 
 assert(
@@ -124,6 +146,40 @@ assert(
     volleyballSource
   ),
   "accepts a separate sport family without hill-walking tuning"
+);
+
+const cricketSource = normalizeSource({
+  name: "Learned Eventbrite search: cricket",
+  url: "https://www.eventbrite.ie/d/ireland--cork/events/?q=cricket",
+  area: "county",
+  category: "sport",
+  searchTerm: "cricket",
+});
+assert(
+  learnedSearchTermMatches(
+    {
+      title: "Cork Harlequins v Cork County",
+      summary: "Cricket fixture at Farmers Cross.",
+      location: "Cork",
+      url: "https://example.com/cork-cricket-fixture",
+      tags: ["sport"],
+    },
+    cricketSource
+  ),
+  "accepts a relevant generic learned sport term"
+);
+assert(
+  !learnedSearchTermMatches(
+    {
+      title: "Data Engineering Bootcamp",
+      summary: "Online training session.",
+      location: "Cork",
+      url: "https://www.eventbrite.ie/d/ireland--cork/events/?q=cricket",
+      tags: ["sport", "cricket"],
+    },
+    cricketSource
+  ),
+  "does not allow a generic learned sport term to pass from tags or search URL alone"
 );
 
 console.log("source routing tests passed");

@@ -1225,9 +1225,14 @@ function extractKnownTextEvents(html, source) {
 function learnedSearchTermMatches(event, source) {
   if (!source.learnedSearch || !source.searchTerm) return true;
   const terms = source.searchTerms?.length ? source.searchTerms : activityTermsFor(source.searchTerm);
-  const eventEvidence = normalizeSearchText([event.title, event.summary, event.location, event.url].join(" "));
-  if (isNegativeActivityMatch(eventEvidence, source)) return false;
-  const termMatch = terms.some((term) => matchesTerm(eventEvidence, term)) || eventMatchesActivityFamily(eventEvidence, source.searchTerm);
+  const eventUrl = normalizeSearchText(event.url) === normalizeSearchText(source.url) ? "" : event.url;
+  const eventTextEvidence = normalizeSearchText([event.title, event.summary, event.location].join(" "));
+  const eventEvidence = normalizeSearchText([eventTextEvidence, eventUrl].join(" "));
+  if (isNegativeActivityMatch(eventTextEvidence, source)) return false;
+  const family = activityFamilyFor(source.searchTerm);
+  const termMatch = family
+    ? eventMatchesActivityFamily(eventTextEvidence, source.searchTerm)
+    : terms.some((term) => matchesTerm(eventEvidence, term));
   if (!termMatch) return false;
   if (source.category === "sport" && isActivitySearchPrompt(source.searchTerm, source.category)) {
     const localityTerms = source.localityTerms?.length ? source.localityTerms : ["cork", "west cork", "cork city", "county cork"];
@@ -1241,7 +1246,13 @@ function learnedSearchTermMatches(event, source) {
 function eventMatchesActivityFamily(haystack, searchTerm) {
   const family = activityFamilyFor(searchTerm);
   if (!family) return false;
-  return family.positive.some((term) => matchesTerm(haystack, term)) && !family.negative.some((term) => matchesTerm(haystack, term));
+  return family.positive.some((term) => familyTermFound(haystack, term)) && !family.negative.some((term) => familyTermFound(haystack, term));
+}
+
+function familyTermFound(haystack, term) {
+  const text = ` ${normalizeSearchText(haystack)} `;
+  const needle = ` ${normalizeSearchText(term)} `;
+  return text.includes(needle);
 }
 
 function activityFamilyFor(searchTerm) {
@@ -1249,7 +1260,7 @@ function activityFamilyFor(searchTerm) {
   const families = [
     {
       names: ["hill", "hill walking", "hillwalking", "hiking", "guided walk", "walking"],
-      positive: ["walk", "walks", "walking", "hike", "hiking", "loop", "trail", "crossing", "mountain", "mountains", "ballyhoura", "comeragh", "galtee", "guided"],
+      positive: ["hike", "hiking", "loop", "trail", "crossing", "mountain", "mountains", "ballyhoura", "comeragh", "galtee", "guided walk", "guided walks", "hill walk", "hillwalking"],
       negative: ["concert", "gig", "tickets", "two day tickets", "music", "farm", "puffin", "boat tour", "cruise", "wildlife"],
     },
     {
