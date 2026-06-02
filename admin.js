@@ -95,7 +95,7 @@ function renderApprovedSources(sources) {
         <article class="admin-item">
           <div>
             <strong>${escapeHtml(source.name)}</strong>
-            <p>${escapeHtml(source.category)} · ${escapeHtml(source.area)}${source.searchTerm ? ` · ${escapeHtml(source.searchTerm)}` : ""}</p>
+            <p>${escapeHtml(source.category)} · ${escapeHtml(source.area)}${source.type ? ` · ${escapeHtml(source.type)}` : ""}${source.searchTerm ? ` · ${escapeHtml(source.searchTerm)}` : ""}</p>
             <a href="${escapeHtml(source.url)}" target="_blank" rel="noreferrer">${escapeHtml(source.url)}</a>
           </div>
         </article>
@@ -118,7 +118,7 @@ function renderCandidates(candidates) {
           <input type="checkbox" value="${index}" ${candidate.eventCount ? "checked" : ""} />
           <span>
             <strong>${escapeHtml(candidate.name)}</strong>
-            <small>${escapeHtml(candidate.category)} · ${escapeHtml(candidate.area)} · ${candidate.eventCount || 0} events found</small>
+            <small>${escapeHtml(candidate.category)} · ${escapeHtml(candidate.area)}${candidate.type ? ` · ${escapeHtml(candidate.type)}` : ""} · ${candidate.eventCount || 0} events found</small>
             <a href="${escapeHtml(candidate.url)}" target="_blank" rel="noreferrer">${escapeHtml(candidate.url)}</a>
             ${
               candidate.eventCount

@@ -160,6 +160,45 @@ function sourceIdentity(source) {
   return normalizeSearchText(source.url || source.name || "");
 }
 
+function inferSourceType(source) {
+  const url = String(source.url || "").toLowerCase();
+  const kind = source.kind || source.type || source.sourceType || "";
+  if (kind) return kind;
+  if (/reddit\.com/i.test(url)) return "reddit";
+  if (/eventbrite\./i.test(url)) return /\/e\//i.test(url) ? "eventbrite-event" : "eventbrite-search";
+  if (/meetup\.com\/find/i.test(url)) return "meetup-search";
+  if (/skiddle\.com/i.test(url)) return "listing-search";
+  if (/fixture|fixtures|results|match/i.test(url)) return "sport-fixtures";
+  return "generic-html";
+}
+
+function normalizeSource(source) {
+  const searchTerm = cleanText(source.searchTerm || source.activity || "");
+  const aliases = dedupeStrings(source.aliases || [], 16);
+  return {
+    name: source.name,
+    url: source.url,
+    area: source.area || "county",
+    category: source.category || "festival",
+    type: inferSourceType(source),
+    kind: source.kind || "",
+    activity: searchTerm,
+    searchTerm,
+    searchTerms: dedupeStrings(source.searchTerms?.length ? source.searchTerms : activityTermsFor(searchTerm, aliases), 20),
+    aliases,
+    negativeTerms: source.negativeTerms || [],
+    sourceHints: source.sourceHints || [],
+    likelySourceTypes: source.likelySourceTypes || [],
+    validationSignals: source.validationSignals || [],
+    rejectionSignals: source.rejectionSignals || [],
+    sourceTypes: source.sourceTypes || [],
+    localityTerms: source.localityTerms || [],
+    manual: source.manual,
+    learned: source.learned,
+    learnedSearch: Boolean(searchTerm || source.learnedSearch),
+  };
+}
+
 function activityTermsFor(value, aliases = []) {
   const term = normalizeSearchText(value);
   const builtInAliases = {
@@ -240,42 +279,10 @@ function activityCandidateFromQuery(query) {
 
 function getActiveSources(searchQuery = "") {
   const learning = readLearningState();
-  const manualSources = [...readManualSources(), ...readApprovedSources()].map((source) => ({
-    name: source.name,
-    url: source.url,
-    area: source.area || "county",
-    category: source.category || "festival",
-    kind: source.kind || "",
-    searchTerm: source.searchTerm || "",
-    searchTerms: source.searchTerms || [],
-    aliases: source.aliases || [],
-    negativeTerms: source.negativeTerms || [],
-    validationSignals: source.validationSignals || [],
-    rejectionSignals: source.rejectionSignals || [],
-    localityTerms: source.localityTerms || [],
-    manual: true,
-    learnedSearch: Boolean(source.searchTerm),
-  }));
+  const manualSources = [...readManualSources(), ...readApprovedSources()].map((source) => normalizeSource({ ...source, manual: true }));
   const learnedSources = learning.learnedSources
     .filter((source) => source.status !== "paused" && source.url)
-    .map((source) => ({
-      name: source.name,
-      url: source.url,
-      area: source.area || "county",
-      category: source.category || "festival",
-      searchTerm: source.searchTerm || "",
-      searchTerms: source.searchTerms || [],
-      aliases: source.aliases || [],
-      negativeTerms: source.negativeTerms || [],
-      sourceHints: source.sourceHints || [],
-      likelySourceTypes: source.likelySourceTypes || [],
-      validationSignals: source.validationSignals || [],
-      rejectionSignals: source.rejectionSignals || [],
-      sourceTypes: source.sourceTypes || [],
-      localityTerms: source.localityTerms || [],
-      learned: true,
-      learnedSearch: Boolean(source.searchTerm),
-    }));
+    .map((source) => normalizeSource({ ...source, learned: true }));
   const searchableCandidates = learning.candidates
     .filter((candidate) => candidate.status !== "ignored" && candidate.score >= 4 && isUsefulVenueName(candidate.name))
     .sort((a, b) => b.score - a.score);
@@ -1619,10 +1626,7 @@ async function fetchRedditSource(source) {
   }
 }
 
-async function fetchSource(source) {
-  if (source.kind === "discovery") return fetchDiscoverySource(source);
-  if (source.kind === "reddit") return fetchRedditSource(source);
-
+async function fetchGenericHtmlSource(source) {
   try {
     const html = await fetchHtml(source.url);
     const sportFixtures = extractSportFixtures(html, source);
@@ -1637,6 +1641,36 @@ async function fetchSource(source) {
   } catch (error) {
     return { source: source.name, ok: false, error: error.message, events: [] };
   }
+}
+
+async function fetchEventbriteSource(source) {
+  try {
+    const html = await fetchHtml(source.url);
+    const structured = extractJsonLdEvents(html, source);
+    const eventbrite = extractEventbriteListingEvents(html, source);
+    const discovered = source.type === "eventbrite-search" ? await fetchEventbriteDiscoveredEvents(source) : [];
+    const events = filterLearnedSearchEvents([...structured, ...eventbrite, ...discovered], source);
+    return { source: source.name, ok: true, events };
+  } catch (error) {
+    return { source: source.name, ok: false, error: error.message, events: [] };
+  }
+}
+
+async function fetchMeetupSearchSource(source) {
+  const result = await fetchGenericHtmlSource(source);
+  return {
+    ...result,
+    events: filterLearnedSearchEvents(result.events || [], source),
+  };
+}
+
+async function fetchSource(rawSource) {
+  const source = normalizeSource(rawSource);
+  if (source.type === "discovery" || source.kind === "discovery") return fetchDiscoverySource(source);
+  if (source.type === "reddit" || source.kind === "reddit") return fetchRedditSource(source);
+  if (source.type === "eventbrite-search" || source.type === "eventbrite-event") return fetchEventbriteSource(source);
+  if (source.type === "meetup-search") return fetchMeetupSearchSource(source);
+  return fetchGenericHtmlSource(source);
 }
 
 function eventMatchesQuery(event, params) {
@@ -1951,19 +1985,22 @@ function sourceFromCandidate(candidate) {
   const name = cleanText(candidate.name || suggestionName(candidate.url || "", candidate.url || ""));
   const url = cleanText(candidate.url || "");
   const category = normalizePlannerCategory(candidate.category || inferCategory(name, "festival", name), "festival");
-  return {
+  const searchTerm = cleanText(candidate.searchTerm || candidate.activity || "");
+  return normalizeSource({
     name,
     url,
     area: ["west-cork", "city", "county"].includes(candidate.area) ? candidate.area : "county",
     category,
-    searchTerm: cleanText(candidate.searchTerm || ""),
+    type: candidate.type || candidate.kind || inferSourceType(candidate),
+    activity: searchTerm,
+    searchTerm,
     searchTerms: dedupeStrings(candidate.searchTerms || [], 12),
     aliases: dedupeStrings(candidate.aliases || [], 12),
     negativeTerms: dedupeStrings(candidate.negativeTerms || [], 12),
     validationSignals: dedupeStrings(candidate.validationSignals || [], 12),
     rejectionSignals: dedupeStrings(candidate.rejectionSignals || [], 12),
     localityTerms: dedupeStrings(candidate.localityTerms || [], 10),
-  };
+  });
 }
 
 function adminSourceSummary(source) {
@@ -1972,7 +2009,9 @@ function adminSourceSummary(source) {
     url: source.url,
     area: source.area || "county",
     category: source.category || "festival",
+    type: source.type || inferSourceType(source),
     searchTerm: source.searchTerm || "",
+    aliases: source.aliases || [],
   };
 }
 
