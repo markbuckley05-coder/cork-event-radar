@@ -207,6 +207,7 @@ function activityTermsFor(value, aliases = []) {
     "hill walking": ["hill walking", "hillwalking", "hiking", "guided walk", "guided walks", "walk", "walking"],
     hillwalking: ["hill walking", "hillwalking", "hiking", "guided walk", "guided walks", "walk", "walking"],
     hiking: ["hiking", "hill walking", "hillwalking", "guided walk", "guided walks", "walk", "walking"],
+    hill: ["hill", "hill walking", "hillwalking", "hiking", "guided walk", "guided walks", "walk", "walking"],
   };
   return [...new Set([term, ...(builtInAliases[term] || []), ...aliases.map(normalizeSearchText)].filter(Boolean))];
 }
@@ -1224,9 +1225,9 @@ function extractKnownTextEvents(html, source) {
 function learnedSearchTermMatches(event, source) {
   if (!source.learnedSearch || !source.searchTerm) return true;
   const terms = source.searchTerms?.length ? source.searchTerms : activityTermsFor(source.searchTerm);
-  const haystack = normalizeSearchText([event.title, event.summary, event.location, event.url, ...(event.tags || [])].join(" "));
-  if (isNegativeActivityMatch(haystack, source)) return false;
-  const termMatch = terms.some((term) => matchesTerm(haystack, term)) || eventMatchesActivityFamily(haystack, source.searchTerm);
+  const eventEvidence = normalizeSearchText([event.title, event.summary, event.location, event.url].join(" "));
+  if (isNegativeActivityMatch(eventEvidence, source)) return false;
+  const termMatch = terms.some((term) => matchesTerm(eventEvidence, term)) || eventMatchesActivityFamily(eventEvidence, source.searchTerm);
   if (!termMatch) return false;
   if (source.category === "sport" && isActivitySearchPrompt(source.searchTerm, source.category)) {
     const localityTerms = source.localityTerms?.length ? source.localityTerms : ["cork", "west cork", "cork city", "county cork"];
@@ -1238,10 +1239,36 @@ function learnedSearchTermMatches(event, source) {
 }
 
 function eventMatchesActivityFamily(haystack, searchTerm) {
-  if (/hill\s*walking|hillwalking|hiking/i.test(searchTerm)) {
-    return /\b(walk|walks|walking|hike|hiking|loop|trail|crossing|mountain|mountains|ballyhoura|comeragh|galtee|guided)\b/i.test(haystack);
-  }
-  return false;
+  const family = activityFamilyFor(searchTerm);
+  if (!family) return false;
+  return family.positive.some((term) => matchesTerm(haystack, term)) && !family.negative.some((term) => matchesTerm(haystack, term));
+}
+
+function activityFamilyFor(searchTerm) {
+  const term = normalizeSearchText(searchTerm);
+  const families = [
+    {
+      names: ["hill", "hill walking", "hillwalking", "hiking", "guided walk", "walking"],
+      positive: ["walk", "walks", "walking", "hike", "hiking", "loop", "trail", "crossing", "mountain", "mountains", "ballyhoura", "comeragh", "galtee", "guided"],
+      negative: ["concert", "gig", "tickets", "two day tickets", "music", "farm", "puffin", "boat tour", "cruise", "wildlife"],
+    },
+    {
+      names: ["rowing"],
+      positive: ["rowing", "regatta", "boat club", "crew", "oars", "sculling"],
+      negative: ["row", "argument", "concert", "gig"],
+    },
+    {
+      names: ["volleyball"],
+      positive: ["volleyball", "beach volleyball", "club match", "fixtures", "league"],
+      negative: ["concert", "gig", "music"],
+    },
+    {
+      names: ["basketball"],
+      positive: ["basketball", "basket ball", "hoops", "club match", "fixtures", "league"],
+      negative: ["concert", "gig", "music"],
+    },
+  ];
+  return families.find((family) => family.names.some((name) => matchesTerm(term, name) || matchesTerm(name, term)));
 }
 
 function filterLearnedSearchEvents(events, source) {
@@ -2719,6 +2746,18 @@ const server = http.createServer((request, response) => {
   serveStatic(request, response);
 });
 
-server.listen(PORT, () => {
-  console.log(`Cork Event Radar running at http://localhost:${PORT}`);
-});
+if (require.main === module) {
+  server.listen(PORT, () => {
+    console.log(`Cork Event Radar running at http://localhost:${PORT}`);
+  });
+}
+
+module.exports = {
+  activityFamilyFor,
+  activityTermsFor,
+  eventMatchesActivityFamily,
+  extractEventbriteListingEvents,
+  filterLearnedSearchEvents,
+  learnedSearchTermMatches,
+  normalizeSource,
+};
