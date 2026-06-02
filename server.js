@@ -783,7 +783,7 @@ function extractEventbriteListingEvents(html, source) {
   const seen = new Set();
   const eventUrlRegex = /https:\/\/www\.eventbrite\.ie\/e\/([a-z0-9-]+?)-(?:tickets|registration)-(\d+)/gi;
   const datePattern =
-    /\b(?:mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun),?\s+(?:\d{1,2}\s+(?:jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|sept|september|oct|october|nov|november|dec|december)|(?:jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|sept|september|oct|october|nov|november|dec|december)\s+\d{1,2}),?\s*(?:\d{4})?(?:,\s*\d{1,2}[:.]\d{2})?/i;
+    /\b(?:mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun),?\s+(?:\d{1,2}\s+(?:jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|sept|september|oct|october|nov|november|dec|december)|(?:jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|sept|september|oct|october|nov|november|dec|december)\s+\d{1,2}),?\s*(?:\d{4})?(?:\s*[-,]\s*\d{1,2}[:.]\d{2}(?:\s*(?:am|pm))?)?/i;
   let match;
 
   while ((match = eventUrlRegex.exec(html)) && events.length < 30) {
@@ -792,6 +792,7 @@ function extractEventbriteListingEvents(html, source) {
     const index = match.index;
     const context = cleanText(html.slice(Math.max(0, index - 1600), index + 2400));
     const title = titleFromEventbriteSlug(slug);
+    if (!isUsableEventTitle(title)) continue;
     const dateMatch = context.match(datePattern);
     const startDate = normalizeDate(dateMatch?.[0]);
     if (!title || !startDate) continue;
@@ -802,6 +803,7 @@ function extractEventbriteListingEvents(html, source) {
 
     const location = locationFromEventbriteContext(context, source.area);
     const eventText = `${title} ${context}`;
+    if (!eventbriteCardMatchesSource(eventText, source)) continue;
     const category = inferCategory(eventText, source.category, source.name);
     const area = inferArea(`${title} ${location} ${context}`, source.area);
     events.push({
@@ -830,27 +832,28 @@ function extractEventbriteListingEvents(html, source) {
 
 function extractEventbriteTextCardEvents(text, source, datePattern) {
   const events = [];
-  const saveRegex = /Save this event:\s*/gi;
+  const saveRegex = /(?:Save this event:\s*)+/gi;
   let match;
 
   while ((match = saveRegex.exec(text)) && events.length < 30) {
-    const context = text.slice(match.index, match.index + 1600);
-    const afterLabel = context.replace(/^Save this event:\s*/i, "");
-    const titleMatch = afterLabel.match(/^(.{8,180}?)(?=\s+(?:Save this event:|Sales end soon|Going fast|Almost full|Nearly full|Selling quickly|Free|From\s+[€$£]|\b(?:Mon|Tue|Tues|Wed|Thu|Thur|Thurs|Fri|Sat|Sun),?\s+))/i);
+    const context = text.slice(match.index, match.index + 2200);
+    const afterLabel = context.replace(/^(?:Save this event:\s*)+/i, "");
+    const titleMatch = afterLabel.match(/^(.{8,190}?)(?=\s+(?:Save this event:|Sales end soon|Going fast|Almost full|Almost gone|Nearly full|Selling quickly|Free|From\s+|Mon,?\s+|Tue,?\s+|Tues,?\s+|Wed,?\s+|Thu,?\s+|Thur,?\s+|Thurs,?\s+|Fri,?\s+|Sat,?\s+|Sun,?\s+))/i);
     const title = cleanText(titleMatch?.[1] || "");
-    if (!title || /^save this event/i.test(title)) continue;
+    if (!isUsableEventTitle(title)) continue;
 
     const dateMatch = context.match(datePattern);
     const startDate = normalizeDate(dateMatch?.[0]);
     if (!startDate) continue;
 
     const location = locationAfterEventbriteDate(context, dateMatch[0], source.area);
-    const eventText = `${title} ${context}`;
+    const eventText = [title, context].join(" ");
+    if (!eventbriteCardMatchesSource(eventText, source)) continue;
     const category = inferCategory(eventText, source.category, source.name);
-    const area = inferArea(`${title} ${location} ${context}`, source.area);
+    const area = inferArea([title, location, context].join(" "), source.area);
     events.push({
       title,
-      summary: cleanText(context).slice(0, 240) || "Open Eventbrite for full details, tickets, and venue information.",
+      summary: cleanEventbriteSummary(context),
       startDate,
       location,
       area,
@@ -865,9 +868,34 @@ function extractEventbriteTextCardEvents(text, source, datePattern) {
   return events;
 }
 
+function isUsableEventTitle(title) {
+  const normalized = normalizeSearchText(title);
+  if (normalized.length < 4 || normalized.length > 150) return false;
+  if (/\b(featured featured|find tickets featured|cursor|border|background color|padding|important|span|href|class|width mobile|image background|li class)\b/i.test(title)) return false;
+  if (/^[^a-z0-9]*$/i.test(title)) return false;
+  return true;
+}
+
+function eventbriteCardMatchesSource(text, source) {
+  if (!source.searchTerm) return true;
+  const haystack = normalizeSearchText([text, source.name, source.url].join(" "));
+  const terms = activityTermsFor(source.searchTerm, source.aliases || []);
+  if (terms.some((term) => matchesTerm(haystack, term))) return true;
+  if (/hill\s*walking|hillwalking|hiking/i.test(source.searchTerm)) {
+    return /\b(walk|walks|walking|hike|hiking|loop|trail|crossing|mountain|mountains|ballyhoura|comeragh|galtee|guided)\b/i.test(haystack);
+  }
+  return false;
+}
+
+function cleanEventbriteSummary(context) {
+  return cleanText(context)
+    .replace(/\b(?:cursor|border|background-color|padding|important|span|class|href)[^ ]*/gi, " ")
+    .replace(/\s+/g, " ")
+    .slice(0, 240) || "Open Eventbrite for full details, tickets, and venue information.";
+}
 function locationAfterEventbriteDate(context, dateText, fallbackArea) {
   const afterDate = cleanText(context.slice(context.indexOf(dateText) + String(dateText).length));
-  const beforePrice = afterDate.split(/\b(?:From|Free|Save this event:|Sales end soon|Going fast|Almost full|Nearly full|Selling quickly)\b/i)[0] || "";
+  const beforePrice = afterDate.split(/\b(?:From|Free|Save this event:|Sales end soon|Going fast|Almost full|Almost gone|Nearly full|Selling quickly)\b/i)[0] || "";
   const location = cleanText(beforePrice.replace(/^[,.\s]+/, "").slice(0, 120));
   if (location.length >= 3) return location;
   return locationFromEventbriteContext(context, fallbackArea);
@@ -1191,9 +1219,7 @@ function learnedSearchTermMatches(event, source) {
   const terms = source.searchTerms?.length ? source.searchTerms : activityTermsFor(source.searchTerm);
   const haystack = normalizeSearchText([event.title, event.summary, event.location, event.url, ...(event.tags || [])].join(" "));
   if (isNegativeActivityMatch(haystack, source)) return false;
-  const sourceContext = normalizeSearchText([source.name, source.url, source.searchTerm, ...(source.aliases || [])].join(" "));
-  const sourceIsTermScoped = terms.some((term) => matchesTerm(sourceContext, term));
-  const termMatch = sourceIsTermScoped || terms.some((term) => matchesTerm(haystack, term));
+  const termMatch = terms.some((term) => matchesTerm(haystack, term)) || eventMatchesActivityFamily(haystack, source.searchTerm);
   if (!termMatch) return false;
   if (source.category === "sport" && isActivitySearchPrompt(source.searchTerm, source.category)) {
     const localityTerms = source.localityTerms?.length ? source.localityTerms : ["cork", "west cork", "cork city", "county cork"];
@@ -1202,6 +1228,13 @@ function learnedSearchTermMatches(event, source) {
     return localityTerms.some((term) => matchesTerm(eventText, term));
   }
   return true;
+}
+
+function eventMatchesActivityFamily(haystack, searchTerm) {
+  if (/hill\s*walking|hillwalking|hiking/i.test(searchTerm)) {
+    return /\b(walk|walks|walking|hike|hiking|loop|trail|crossing|mountain|mountains|ballyhoura|comeragh|galtee|guided)\b/i.test(haystack);
+  }
+  return false;
 }
 
 function filterLearnedSearchEvents(events, source) {
