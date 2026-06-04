@@ -809,7 +809,7 @@ function extractEventbriteListingEvents(html, source) {
     if (seen.has(key)) continue;
     seen.add(key);
 
-    const location = locationFromEventbriteContext(context, source.area);
+    const location = locationAfterEventbriteDate(context, dateMatch[0], source.area);
     const eventText = `${title} ${context}`;
     if (!eventbriteCardMatchesSource(eventText, source)) continue;
     const category = inferCategory(eventText, source.category, source.name);
@@ -831,11 +831,20 @@ function extractEventbriteListingEvents(html, source) {
   extractEventbriteTextCardEvents(text, source, datePattern).forEach((event) => {
     const key = normalizeSearchText(`${event.title} ${event.startDate} ${event.location}`);
     if (seen.has(key)) return;
+    if (events.some((existing) => isEventbriteDuplicate(existing, event))) return;
     seen.add(key);
     events.push(event);
   });
 
   return events;
+}
+
+function isEventbriteDuplicate(existing, candidate) {
+  if (!existing.startDate || existing.startDate !== candidate.startDate) return false;
+  const existingTitle = normalizeSearchText(existing.title);
+  const candidateTitle = normalizeSearchText(candidate.title);
+  if (!existingTitle || !candidateTitle) return false;
+  return existingTitle.includes(candidateTitle) || candidateTitle.includes(existingTitle);
 }
 
 function extractEventbriteTextCardEvents(text, source, datePattern) {
@@ -846,22 +855,24 @@ function extractEventbriteTextCardEvents(text, source, datePattern) {
   while ((match = saveRegex.exec(text)) && events.length < 30) {
     const context = text.slice(match.index, match.index + 2200);
     const afterLabel = context.replace(/^(?:Save this event:\s*)+/i, "");
+    const nextCardIndex = afterLabel.search(/\sSave this event:/i);
+    const cardContext = nextCardIndex >= 0 ? afterLabel.slice(0, nextCardIndex) : afterLabel;
     const titleMatch = afterLabel.match(/^(.{8,190}?)(?=\s+(?:Save this event:|Sales end soon|Going fast|Almost full|Almost gone|Nearly full|Selling quickly|Free|From\s+|Mon,?\s+|Tue,?\s+|Tues,?\s+|Wed,?\s+|Thu,?\s+|Thur,?\s+|Thurs,?\s+|Fri,?\s+|Sat,?\s+|Sun,?\s+))/i);
     const title = cleanText(titleMatch?.[1] || "");
     if (!isUsableEventTitle(title)) continue;
 
-    const dateMatch = context.match(datePattern);
+    const dateMatch = cardContext.match(datePattern);
     const startDate = normalizeDate(dateMatch?.[0]);
     if (!startDate) continue;
 
-    const location = locationAfterEventbriteDate(context, dateMatch[0], source.area);
-    const eventText = [title, context].join(" ");
+    const location = locationAfterEventbriteDate(cardContext, dateMatch[0], source.area);
+    const eventText = [title, cardContext].join(" ");
     if (!eventbriteCardMatchesSource(eventText, source)) continue;
     const category = inferCategory(eventText, source.category, source.name);
-    const area = inferArea([title, location, context].join(" "), source.area);
+    const area = inferArea([title, location, cardContext].join(" "), source.area);
     events.push({
       title,
-      summary: cleanEventbriteSummary(context),
+      summary: cleanEventbriteSummary(cardContext),
       startDate,
       location,
       area,
@@ -886,12 +897,11 @@ function isUsableEventTitle(title) {
 
 function eventbriteCardMatchesSource(text, source) {
   if (!source.searchTerm) return true;
-  const haystack = normalizeSearchText([text, source.name, source.url].join(" "));
+  const haystack = normalizeSearchText(text);
   const terms = activityTermsFor(source.searchTerm, source.aliases || []);
+  const family = activityFamilyFor(source.searchTerm);
+  if (family) return eventMatchesActivityFamily(haystack, source.searchTerm);
   if (terms.some((term) => matchesTerm(haystack, term))) return true;
-  if (/hill\s*walking|hillwalking|hiking/i.test(source.searchTerm)) {
-    return /\b(walk|walks|walking|hike|hiking|loop|trail|crossing|mountain|mountains|ballyhoura|comeragh|galtee|guided)\b/i.test(haystack);
-  }
   return false;
 }
 
@@ -904,7 +914,13 @@ function cleanEventbriteSummary(context) {
 function locationAfterEventbriteDate(context, dateText, fallbackArea) {
   const afterDate = cleanText(context.slice(context.indexOf(dateText) + String(dateText).length));
   const beforePrice = afterDate.split(/\b(?:From|Free|Save this event:|Sales end soon|Going fast|Almost full|Almost gone|Nearly full|Selling quickly)\b/i)[0] || "";
-  const location = cleanText(beforePrice.replace(/^[,.\s]+/, "").slice(0, 120));
+  const location = cleanText(
+    beforePrice
+      .replace(/<[\s\S]*$/i, " ")
+      .replace(/\b(?:path|svg)\s+(?:fill|clip|d)[\s\S]*$/i, " ")
+      .replace(/^[,.\s]+/, "")
+      .slice(0, 120)
+  );
   if (location.length >= 3) return location;
   return locationFromEventbriteContext(context, fallbackArea);
 }
@@ -1235,12 +1251,24 @@ function learnedSearchTermMatches(event, source) {
     : terms.some((term) => matchesTerm(eventEvidence, term));
   if (!termMatch) return false;
   if (source.category === "sport" && isActivitySearchPrompt(source.searchTerm, source.category)) {
+    if (sourceImpliesCorkLocality(source)) return true;
     const localityTerms = source.localityTerms?.length ? source.localityTerms : ["cork", "west cork", "cork city", "county cork"];
     const location = normalizeSearchText(event.location) === "county cork" ? "" : event.location;
     const eventText = normalizeSearchText([event.title, location].join(" "));
     return localityTerms.some((term) => matchesTerm(eventText, term));
   }
   return true;
+}
+
+function sourceImpliesCorkLocality(source) {
+  const haystack = normalizeSearchText([source.name, source.url].join(" "));
+  return (
+    matchesTerm(haystack, "ireland cork") ||
+    matchesTerm(haystack, "ie cork") ||
+    matchesTerm(haystack, "cork events") ||
+    matchesTerm(haystack, "meetup cork") ||
+    matchesTerm(haystack, "eventbrite cork")
+  );
 }
 
 function eventMatchesActivityFamily(haystack, searchTerm) {
@@ -2766,7 +2794,9 @@ if (require.main === module) {
 module.exports = {
   activityFamilyFor,
   activityTermsFor,
+  eventMatchesDate,
   eventMatchesActivityFamily,
+  eventMatchesQuery,
   extractEventbriteListingEvents,
   filterLearnedSearchEvents,
   learnedSearchTermMatches,

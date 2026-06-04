@@ -1,5 +1,7 @@
 const assert = require("node:assert");
 const {
+  eventMatchesDate,
+  eventMatchesQuery,
   extractEventbriteListingEvents,
   filterLearnedSearchEvents,
   learnedSearchTermMatches,
@@ -51,6 +53,20 @@ assert(
     source
   ),
   "accepts a relevant outdoor walking event"
+);
+
+assert(
+  learnedSearchTermMatches(
+    {
+      title: "Castle Oliver & Ballyhoura Loop with Declan Clancy",
+      summary: "Guided walking loop through the Ballyhoura mountains.",
+      location: "Ballyorgan",
+      url: "https://www.eventbrite.ie/e/castle-oliver-ballyhoura-loop-tickets-123",
+      tags: ["sport", "hillwalking"],
+    },
+    hillSource({ localityTerms: [] })
+  ),
+  "accepts a relevant event from a Cork-scoped source even when the event card omits Cork"
 );
 
 assert(
@@ -126,6 +142,14 @@ const filtered = filterLearnedSearchEvents(
 );
 assert.equal(filtered.length, 1, "filter keeps only relevant hill-walking events");
 assert.equal(filtered[0].title, "Castle Oliver & Ballyhoura Loop with Declan Clancy");
+
+const displayParams = new URLSearchParams({
+  q: "hillwalking",
+  from: "2026-06-13",
+  to: "2026-06-15",
+});
+const displayEvents = filtered.filter((event) => eventMatchesQuery(event, displayParams)).filter((event) => eventMatchesDate(event, displayParams));
+assert.equal(displayEvents.length, 1, "dashboard query/date filters keep the relevant learned activity event visible");
 
 const volleyballSource = normalizeSource({
   name: "Volleyball Cork",
