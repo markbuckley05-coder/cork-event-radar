@@ -617,7 +617,7 @@ function inferCategory(text, fallback, sourceName = "") {
   if (/cork on a fork/i.test(sourceName) || fallback === "food") return "food";
 
   const haystack = normalizeSearchText(text || "");
-  if (/comedy|stand up|stand-up/i.test(haystack)) return "arts";
+  if (/\b(comedy|comedian|comic|humour|humor|stand up|stand-up|storytelling)\b/i.test(haystack)) return "arts";
   const tradTerms = [
     "irish traditional",
     "traditional irish",
@@ -648,20 +648,17 @@ function inferCategory(text, fallback, sourceName = "") {
     "ceol chorcaí",
   ];
   if (fallback === "trad" || tradTerms.some((term) => matchesTerm(haystack, term))) return "trad";
-  if (/\b(fc|afc|rovers|rangers|united|wanderers|ramblers|athletic)\b/i.test(haystack)) return "sport";
 
   const tests = [
     ["markets", ["farmers market", "farmer's market", "farmers' market", "market", "craft fair", "food market", "producer market"]],
     ["food", ["food", "fork", "taste", "chef", "market", "dining", "drink", "beer"]],
-    ["rugby", ["rugby", "munster", "urc", "virgin media park"]],
+    ["rugby", ["rugby", "munster rugby", "urc"]],
     ["gaa", ["gaa", "hurling", "camogie", "gaelic football"]],
     [
       "sport",
       [
         "fixture",
         "fixtures",
-        "match",
-        "matches",
         "sports",
         "casual games",
         "soccer",
@@ -715,7 +712,9 @@ function tagsFor(category, area, fallback) {
   if (category === "trad") tags.push("music", "festival");
   if (category === "markets") tags.push("food");
   if (category === "gaa" || category === "rugby") tags.push("sport");
-  if (fallback && fallback !== category && fallback !== "festival") tags.push(fallback);
+  const sportCategories = new Set(["sport", "gaa", "rugby"]);
+  const fallbackWouldMislabelSport = sportCategories.has(fallback) && !sportCategories.has(category);
+  if (fallback && fallback !== category && fallback !== "festival" && !fallbackWouldMislabelSport) tags.push(fallback);
   return [...new Set(tags)];
 }
 
@@ -1108,7 +1107,7 @@ function extractHeuristicEvents(html, source) {
 }
 
 function isSportFixtureSource(source) {
-  return source.category === "sport" && Boolean(source.searchTerm);
+  return source.category === "gaa" || source.category === "rugby" || (source.category === "sport" && Boolean(source.searchTerm));
 }
 
 function hasCorkClubSignal(text) {
@@ -1153,8 +1152,65 @@ function extractSportFixtures(html, source) {
   return events;
 }
 
+function dataAttribute(tag, name) {
+  const match = String(tag || "").match(new RegExp(`\\bdata-${name}\\s*=\\s*(["'])([\\s\\S]*?)\\1`, "i"));
+  return cleanText(match?.[2] || "");
+}
+
+function extractDataAttributeFixtures(html, source) {
+  if (!isSportFixtureSource(source)) return [];
+  const events = [];
+  const seen = new Set();
+  const tags = String(html || "").match(/<(?:article|div|li|tr|ul)\b[^>]*>/gi) || [];
+
+  for (const tag of tags) {
+    const homeTeam = dataAttribute(tag, "hometeam");
+    const awayTeam = dataAttribute(tag, "awayteam");
+    const rawDate = dataAttribute(tag, "date");
+    if (!homeTeam || !awayTeam || !rawDate || /\btbc\b/i.test(rawDate)) continue;
+
+    const startDate = normalizeDate(rawDate);
+    if (!startDate) continue;
+
+    const comment = dataAttribute(tag, "comment");
+    if (/\b(cancelled|canceled|postponed|abandoned)\b/i.test(comment)) continue;
+
+    const time = dataAttribute(tag, "time");
+    const competition = dataAttribute(tag, "compname") || dataAttribute(tag, "competition");
+    const venue = dataAttribute(tag, "venue") || "County Cork";
+    const title = `${homeTeam} v ${awayTeam}`;
+    const key = normalizeSearchText(`${title} ${startDate} ${venue}`);
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const area = inferArea(`${title} ${venue}`, source.area);
+    const category = source.category === "gaa" || source.category === "rugby" ? source.category : "sport";
+    const details = [
+      competition,
+      time ? `Throw-in/start ${time}` : "",
+      comment,
+      "Open the official source to confirm match status.",
+    ].filter(Boolean);
+
+    events.push({
+      title,
+      summary: details.join(". "),
+      startDate,
+      location: venue,
+      area,
+      category,
+      tags: [...new Set(["sport", category, source.searchTerm, area, "fixtures"].filter(Boolean))],
+      source: source.name,
+      url: source.url,
+      confidence: "Structured fixture data",
+    });
+  }
+
+  return events;
+}
+
 function extractTableFixtureEvents(html, source) {
-  if (source.category !== "sport") return [];
+  if (!isSportFixtureSource(source)) return [];
   const events = [];
   const seen = new Set();
   const rowRegex = /<tr[\s\S]*?<\/tr>/gi;
@@ -1193,7 +1249,7 @@ function extractTableFixtureEvents(html, source) {
       : parts[fixtureIndex + 1] || "";
     const location = locationPart && !/\b(view|scorecard|report|result)\b/i.test(locationPart) ? locationPart : "County Cork";
     const title = fixturePart.replace(/\s+/g, " ").trim();
-    if (!hasCorkClubSignal(`${title} ${location}`)) continue;
+    if (source.category === "sport" && !hasCorkClubSignal(`${title} ${location}`)) continue;
     const key = normalizeSearchText(`${title} ${startDate} ${location}`);
     if (!title || seen.has(key)) continue;
     seen.add(key);
@@ -1205,8 +1261,8 @@ function extractTableFixtureEvents(html, source) {
       startDate,
       location,
       area,
-      category: "sport",
-      tags: ["sport", source.searchTerm, area, "fixtures"].filter(Boolean),
+      category: source.category,
+      tags: [...new Set(["sport", source.category, source.searchTerm, area, "fixtures"].filter(Boolean))],
       source: source.name,
       url: source.url,
       confidence: "Fixture table",
@@ -1217,7 +1273,7 @@ function extractTableFixtureEvents(html, source) {
 }
 
 async function fetchLinkedFixtureEvents(html, source) {
-  if (source.category !== "sport") return [];
+  if (!isSportFixtureSource(source)) return [];
   const links = extractFixturePageLinks(html, source.url).slice(0, 6);
   if (!links.length) return [];
 
@@ -1226,6 +1282,7 @@ async function fetchLinkedFixtureEvents(html, source) {
       try {
         const linkedHtml = await fetchHtml(url);
         return [
+          ...extractDataAttributeFixtures(linkedHtml, { ...source, url }),
           ...extractSportFixtures(linkedHtml, { ...source, url }),
           ...extractTableFixtureEvents(linkedHtml, { ...source, url }),
         ];
@@ -1734,6 +1791,7 @@ async function fetchRedditSource(source) {
 async function fetchGenericHtmlSource(source) {
   try {
     const html = await fetchHtml(source.url);
+    const dataAttributeFixtures = extractDataAttributeFixtures(html, source);
     const sportFixtures = extractSportFixtures(html, source);
     const tableFixtures = extractTableFixtureEvents(html, source);
     const linkedFixtures = await fetchLinkedFixtureEvents(html, source);
@@ -1742,7 +1800,7 @@ async function fetchGenericHtmlSource(source) {
     const eventbrite = extractEventbriteListingEvents(html, source);
     const eventbriteDiscovered = await fetchEventbriteDiscoveredEvents(source);
     const heuristic = structured.length ? [] : extractHeuristicEvents(html, source);
-    return { source: source.name, ok: true, events: filterLearnedSearchEvents([...sportFixtures, ...tableFixtures, ...linkedFixtures, ...knownText, ...structured, ...eventbrite, ...eventbriteDiscovered, ...heuristic], source) };
+    return { source: source.name, ok: true, events: filterLearnedSearchEvents([...dataAttributeFixtures, ...sportFixtures, ...tableFixtures, ...linkedFixtures, ...knownText, ...structured, ...eventbrite, ...eventbriteDiscovered, ...heuristic], source) };
   } catch (error) {
     return { source: source.name, ok: false, error: error.message, events: [] };
   }
@@ -1801,7 +1859,7 @@ function eventMatchesDate(event, params) {
 
 function dedupe(events) {
   const kept = [];
-  events.filter((event) => !isExcludedNightlifeEvent(event)).forEach((event) => {
+  events.filter((event) => !isExcludedNightlifeEvent(event) && !isMalformedFixtureListing(event)).forEach((event) => {
     const duplicateIndex = kept.findIndex((existing) => eventsAreDuplicates(existing, event));
     if (duplicateIndex < 0) {
       kept.push(event);
@@ -1810,6 +1868,11 @@ function dedupe(events) {
     if (eventQuality(event) > eventQuality(kept[duplicateIndex])) kept[duplicateIndex] = event;
   });
   return kept;
+}
+
+function isMalformedFixtureListing(event) {
+  const title = normalizeSearchText(event?.title || "");
+  return /\bopponent\b/.test(title) && /\bvenue\b/.test(title);
 }
 
 function isExcludedNightlifeEvent(event) {
@@ -1843,9 +1906,6 @@ function canonicalEventUrl(value) {
 function eventsAreDuplicates(left, right) {
   const leftUrl = canonicalEventUrl(left.url);
   const rightUrl = canonicalEventUrl(right.url);
-  if (leftUrl && rightUrl && leftUrl === rightUrl) return true;
-  if (!left.startDate || left.startDate !== right.startDate) return false;
-
   const leftTitle = canonicalEventTitle(left.title);
   const rightTitle = canonicalEventTitle(right.title);
   if (!leftTitle || !rightTitle) return false;
@@ -1853,6 +1913,15 @@ function eventsAreDuplicates(left, right) {
     leftTitle === rightTitle ||
     (Math.min(leftTitle.length, rightTitle.length) >= 12 &&
       (leftTitle.includes(rightTitle) || rightTitle.includes(leftTitle)));
+
+  if (left.startDate && left.startDate === right.startDate && leftTitle === rightTitle) return true;
+
+  if (leftUrl && rightUrl && leftUrl === rightUrl) {
+    if (left.startDate && right.startDate && left.startDate !== right.startDate) return false;
+    return titleMatch;
+  }
+
+  if (!left.startDate || left.startDate !== right.startDate) return false;
   if (!titleMatch) return false;
 
   const leftLocation = normalizeSearchText(left.location);
@@ -2901,9 +2970,11 @@ module.exports = {
   eventMatchesActivityFamily,
   eventMatchesQuery,
   extractEventbriteListingEvents,
+  extractDataAttributeFixtures,
   extractJsonLdEvents,
   filterLearnedSearchEvents,
   isExcludedNightlifeEvent,
+  inferCategory,
   learnedSearchTermMatches,
   normalizeSource,
 };

@@ -3,13 +3,101 @@ const {
   dedupe,
   eventMatchesDate,
   eventMatchesQuery,
+  extractDataAttributeFixtures,
   extractEventbriteListingEvents,
   extractJsonLdEvents,
   filterLearnedSearchEvents,
+  inferCategory,
   isExcludedNightlifeEvent,
   learnedSearchTermMatches,
   normalizeSource,
 } = require("../server");
+
+assert.equal(
+  inferCategory(
+    "Niall McCabe brings self-effacing humour and stories from an Irish island, with lunch available.",
+    "festival",
+    "Pure Cork"
+  ),
+  "arts",
+  "classifies a comedy and storytelling event as arts rather than sport"
+);
+assert.equal(
+  inferCategory("Kingfishr live in concert at Virgin Media Park", "festival", "Skiddle Cork"),
+  "music",
+  "does not classify a concert as rugby merely because of its venue"
+);
+assert.notEqual(
+  inferCategory("Micro-Credentials information session at Munster Technological University", "festival", "Eventbrite Cork"),
+  "rugby",
+  "does not classify every mention of Munster as rugby"
+);
+
+const gaaFixtureSource = normalizeSource({
+  name: "Cork GAA",
+  url: "https://gaacork.ie/fixtures/",
+  area: "county",
+  category: "gaa",
+});
+const dataAttributeFixtures = extractDataAttributeFixtures(
+  `
+    <ul class="fixture"
+      data-date="06 Jun 2026"
+      data-time="19:00"
+      data-hometeam="Clonakilty"
+      data-awayteam="Nemo Rangers"
+      data-comment="Moved from 07/06"
+      data-venue="Clonakilty"
+      data-compname="McCarthy Insurance Group Division 1 FL">
+    </ul>
+    <ul class="fixture"
+      data-date="TBC"
+      data-hometeam="Team One"
+      data-awayteam="Team Two"
+      data-venue="County Cork">
+    </ul>
+  `,
+  gaaFixtureSource
+);
+assert.equal(dataAttributeFixtures.length, 1, "extracts confirmed fixtures and rejects TBC dates");
+assert.equal(dataAttributeFixtures[0].title, "Clonakilty v Nemo Rangers");
+assert.equal(dataAttributeFixtures[0].startDate, "2026-06-06");
+assert.equal(dataAttributeFixtures[0].category, "gaa");
+assert(dataAttributeFixtures[0].tags.includes("sport"), "makes GAA fixtures available under Sport & Matches");
+
+const samePageFixtures = dedupe([
+  dataAttributeFixtures[0],
+  {
+    ...dataAttributeFixtures[0],
+    title: "Castlelyons v Glengarriffe",
+    location: "Enniskeane",
+  },
+]);
+assert.equal(samePageFixtures.length, 2, "keeps distinct fixtures that share an official fixtures-page URL");
+
+const duplicateFixture = {
+  ...dataAttributeFixtures[0],
+  title: "LCC U15 v Cork County Cricket Club",
+  startDate: "2026-06-07",
+};
+assert.equal(
+  dedupe([
+    { ...duplicateFixture, location: "Adare Manor" },
+    { ...duplicateFixture, location: "The Mardyke" },
+  ]).length,
+  1,
+  "removes duplicate fixture records even when scraped venue text conflicts"
+);
+assert.equal(
+  dedupe([
+    {
+      ...duplicateFixture,
+      title: "LCC U15 MCU League Opponent Cork County Cricket Club Venue Adare Manor 7/6/26",
+    },
+  ]).length,
+  0,
+  "rejects raw fixture metadata accidentally presented as an event title"
+);
 
 function hillSource(overrides = {}) {
   return normalizeSource({
