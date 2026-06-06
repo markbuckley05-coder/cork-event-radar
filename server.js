@@ -750,6 +750,7 @@ function eventFromJsonLd(item, source) {
   if (!title) return null;
 
   const text = [title, item.description, location].join(" ");
+  if (isExcludedNightlifeEvent({ title, summary: item.description, location })) return null;
   return {
     title: cleanText(title),
     summary: cleanText(item.description || "Open the source for the latest details."),
@@ -1799,13 +1800,75 @@ function eventMatchesDate(event, params) {
 }
 
 function dedupe(events) {
-  const seen = new Set();
-  return events.filter((event) => {
-    const key = `${event.title}|${event.startDate}|${event.location}`.toLowerCase();
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
+  const kept = [];
+  events.filter((event) => !isExcludedNightlifeEvent(event)).forEach((event) => {
+    const duplicateIndex = kept.findIndex((existing) => eventsAreDuplicates(existing, event));
+    if (duplicateIndex < 0) {
+      kept.push(event);
+      return;
+    }
+    if (eventQuality(event) > eventQuality(kept[duplicateIndex])) kept[duplicateIndex] = event;
   });
+  return kept;
+}
+
+function isExcludedNightlifeEvent(event) {
+  const title = normalizeSearchText(event?.title || "");
+  const text = normalizeSearchText([event?.title, event?.summary].join(" "));
+  if (/\b(disco|discos|nightclub|night club|clubbing)\b/i.test(text)) return true;
+  if (/\b(club night|late night club|evening club|afterparty|after party)\b/i.test(text)) return true;
+  if (/\bclub\s*\d{2}\b/i.test(title)) return true;
+  return false;
+}
+
+function canonicalEventTitle(value) {
+  return normalizeSearchText(value)
+    .replace(/\b(save|share) this event\b/g, " ")
+    .replace(/\b(featured|find tickets|tickets|registration)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function canonicalEventUrl(value) {
+  try {
+    const url = new URL(value);
+    url.search = "";
+    url.hash = "";
+    return url.toString().replace(/\/$/, "").toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+function eventsAreDuplicates(left, right) {
+  const leftUrl = canonicalEventUrl(left.url);
+  const rightUrl = canonicalEventUrl(right.url);
+  if (leftUrl && rightUrl && leftUrl === rightUrl) return true;
+  if (!left.startDate || left.startDate !== right.startDate) return false;
+
+  const leftTitle = canonicalEventTitle(left.title);
+  const rightTitle = canonicalEventTitle(right.title);
+  if (!leftTitle || !rightTitle) return false;
+  const titleMatch =
+    leftTitle === rightTitle ||
+    (Math.min(leftTitle.length, rightTitle.length) >= 12 &&
+      (leftTitle.includes(rightTitle) || rightTitle.includes(leftTitle)));
+  if (!titleMatch) return false;
+
+  const leftLocation = normalizeSearchText(left.location);
+  const rightLocation = normalizeSearchText(right.location);
+  return !leftLocation || !rightLocation || leftLocation === rightLocation || leftLocation.includes(rightLocation) || rightLocation.includes(leftLocation);
+}
+
+function eventQuality(event) {
+  const confidence = normalizeSearchText(event.confidence);
+  return (
+    (confidence.includes("structured") ? 30 : 0) +
+    (canonicalEventUrl(event.url) ? 10 : 0) +
+    Math.min(cleanText(event.summary).length, 240) / 24 +
+    Math.min(cleanText(event.location).length, 120) / 24 -
+    (/\bshare this event\b/i.test(event.title || "") ? 20 : 0)
+  );
 }
 
 const recurringMarkets = [
@@ -2533,8 +2596,9 @@ async function handleApiEvents(request, response) {
   const url = new URL(request.url, `http://${request.headers.host}`);
   const activeSources = getActiveSources(url.searchParams.get("q") || "");
   const results = await Promise.all(activeSources.map(fetchSource));
-  const learning = learnFromScan(results);
-  const events = dedupe([...results.flatMap((result) => result.events), ...generatedMarketEvents()])
+  const cleanedResults = results.map((result) => ({ ...result, events: dedupe(result.events || []) }));
+  const learning = learnFromScan(cleanedResults);
+  const events = dedupe([...cleanedResults.flatMap((result) => result.events), ...generatedMarketEvents()])
     .filter((event) => eventMatchesQuery(event, url.searchParams))
     .filter((event) => eventMatchesArea(event, url.searchParams))
     .filter((event) => eventMatchesDate(event, url.searchParams))
@@ -2543,7 +2607,7 @@ async function handleApiEvents(request, response) {
   sendJson(response, 200, {
     scannedAt: new Date().toISOString(),
     learning: topLearningSummary(learning),
-    sources: results.map(({ source, ok, error, events: sourceEvents }) => ({
+    sources: cleanedResults.map(({ source, ok, error, events: sourceEvents }) => ({
       source,
       ok,
       error,
@@ -2832,12 +2896,14 @@ if (require.main === module) {
 module.exports = {
   activityFamilyFor,
   activityTermsFor,
+  dedupe,
   eventMatchesDate,
   eventMatchesActivityFamily,
   eventMatchesQuery,
   extractEventbriteListingEvents,
   extractJsonLdEvents,
   filterLearnedSearchEvents,
+  isExcludedNightlifeEvent,
   learnedSearchTermMatches,
   normalizeSource,
 };

@@ -1,10 +1,12 @@
 const assert = require("node:assert");
 const {
+  dedupe,
   eventMatchesDate,
   eventMatchesQuery,
   extractEventbriteListingEvents,
   extractJsonLdEvents,
   filterLearnedSearchEvents,
+  isExcludedNightlifeEvent,
   learnedSearchTermMatches,
   normalizeSource,
 } = require("../server");
@@ -88,6 +90,34 @@ const onlineItemListEvents = extractJsonLdEvents(
   })
 );
 assert.equal(onlineItemListEvents.length, 0, "excludes online-only recommendations from local event coverage");
+
+assert(isExcludedNightlifeEvent({ title: "CLUB 30 - An Over 30s Evening Club!" }), "excludes numbered evening clubs");
+assert(isExcludedNightlifeEvent({ title: "Summer Daylight Disco" }), "excludes discos");
+assert(isExcludedNightlifeEvent({ title: "Saturday Night Clubbing at Voodoo" }), "excludes clubbing listings");
+assert(!isExcludedNightlifeEvent({ title: "Traditional Set Dancing Social" }), "keeps social dancing");
+assert(!isExcludedNightlifeEvent({ title: "Céilí and Social Dancing" }), "keeps ceili dancing");
+assert(!isExcludedNightlifeEvent({ title: "Contemporary Dance Performance" }), "keeps dance performances");
+
+const duplicateEvents = dedupe([
+  {
+    title: "Cork Harbour Festival Event",
+    summary: "A complete structured description.",
+    startDate: "2026-06-06",
+    location: "Cork City Hall, Anglesea Street, Cork",
+    url: "https://www.eventbrite.ie/e/cork-harbour-festival-event-tickets-123?aff=search",
+    confidence: "Structured event data",
+  },
+  {
+    title: "Cork Harbour Festival Event Share this event: Cork Harbour Festival Event",
+    summary: "Page fragment.",
+    startDate: "2026-06-06",
+    location: "Cork City Hall",
+    url: "https://www.eventbrite.ie/e/cork-harbour-festival-event-tickets-123",
+    confidence: "Eventbrite text listing",
+  },
+]);
+assert.equal(duplicateEvents.length, 1, "removes duplicate event variants");
+assert.equal(duplicateEvents[0].confidence, "Structured event data", "keeps the cleaner structured duplicate");
 
 const eventbriteText = `
   Save this event: Castle Oliver & Ballyhoura Loop with Declan Clancy
