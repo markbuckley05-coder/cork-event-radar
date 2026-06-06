@@ -743,8 +743,9 @@ function inferArea(text, fallback) {
 function eventFromJsonLd(item, source) {
   const type = Array.isArray(item["@type"]) ? item["@type"].join(" ") : item["@type"];
   if (!String(type || "").toLowerCase().includes("event")) return null;
+  if (/onlineeventattendancemode/i.test(String(item.eventAttendanceMode || ""))) return null;
 
-  const location = typeof item.location === "string" ? item.location : item.location?.name || item.location?.address?.addressLocality || "";
+  const location = jsonLdLocationText(item.location);
   const title = item.name || item.headline;
   if (!title) return null;
 
@@ -764,6 +765,23 @@ function eventFromJsonLd(item, source) {
   };
 }
 
+function jsonLdLocationText(location) {
+  if (typeof location === "string") return cleanText(location);
+  if (!location || typeof location !== "object") return "";
+  const address = typeof location.address === "string" ? { streetAddress: location.address } : location.address || {};
+  return dedupeStrings(
+    [
+      location.name,
+      address.streetAddress,
+      address.addressLocality,
+      address.addressRegion,
+      address.postalCode,
+      address.addressCountry?.name || address.addressCountry,
+    ],
+    8
+  ).join(", ");
+}
+
 function extractJsonLdEvents(html, source) {
   const events = [];
   const regex = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
@@ -772,8 +790,7 @@ function extractJsonLdEvents(html, source) {
     const raw = match[1].replace(/<!--|-->/g, "").trim();
     try {
       const parsed = JSON.parse(raw);
-      const nodes = Array.isArray(parsed) ? parsed : parsed["@graph"] || [parsed];
-      nodes.flat().forEach((node) => {
+      jsonLdEventNodes(parsed).forEach((node) => {
         const event = eventFromJsonLd(node, source);
         if (event) events.push(event);
       });
@@ -781,6 +798,27 @@ function extractJsonLdEvents(html, source) {
       // Some sites include non-standard JSON-LD. Ignore and continue with heuristics.
     }
   }
+  return events;
+}
+
+function jsonLdEventNodes(value, events = [], seen = new Set()) {
+  if (!value || typeof value !== "object" || seen.has(value)) return events;
+  seen.add(value);
+
+  if (Array.isArray(value)) {
+    value.forEach((item) => jsonLdEventNodes(item, events, seen));
+    return events;
+  }
+
+  const type = Array.isArray(value["@type"]) ? value["@type"].join(" ") : value["@type"];
+  if (String(type || "").toLowerCase().includes("event")) events.push(value);
+
+  if (value["@graph"]) jsonLdEventNodes(value["@graph"], events, seen);
+  if (value.itemListElement) jsonLdEventNodes(value.itemListElement, events, seen);
+  if (value.item) jsonLdEventNodes(value.item, events, seen);
+  if (value.mainEntity) jsonLdEventNodes(value.mainEntity, events, seen);
+  if (value.subjectOf) jsonLdEventNodes(value.subjectOf, events, seen);
+
   return events;
 }
 
@@ -2798,6 +2836,7 @@ module.exports = {
   eventMatchesActivityFamily,
   eventMatchesQuery,
   extractEventbriteListingEvents,
+  extractJsonLdEvents,
   filterLearnedSearchEvents,
   learnedSearchTermMatches,
   normalizeSource,

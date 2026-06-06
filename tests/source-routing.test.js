@@ -3,6 +3,7 @@ const {
   eventMatchesDate,
   eventMatchesQuery,
   extractEventbriteListingEvents,
+  extractJsonLdEvents,
   filterLearnedSearchEvents,
   learnedSearchTermMatches,
   normalizeSource,
@@ -22,6 +23,71 @@ function hillSource(overrides = {}) {
 }
 
 const source = hillSource();
+
+const eventbriteItemList = `
+  <script type="application/ld+json">
+    {
+      "@type": "ItemList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "item": {
+            "@type": "Event",
+            "name": "Cork Harbour Festival Event",
+            "startDate": "2026-06-06T10:00:00+01:00",
+            "url": "https://www.eventbrite.ie/e/cork-harbour-festival-event-tickets-1",
+            "location": {
+              "@type": "Place",
+              "name": "Cork City Hall",
+              "address": {
+                "streetAddress": "Anglesea Street",
+                "addressLocality": "Cork",
+                "addressRegion": "County Cork",
+                "addressCountry": "IE"
+              }
+            }
+          }
+        }
+      ]
+    }
+  </script>
+`;
+const itemListEvents = extractJsonLdEvents(eventbriteItemList, normalizeSource({
+  name: "Eventbrite Cork",
+  url: "https://www.eventbrite.ie/d/ireland--cork/events/",
+  area: "county",
+  category: "festival",
+}));
+assert.equal(itemListEvents.length, 1, "extracts events nested inside a JSON-LD ItemList");
+assert.equal(itemListEvents[0].title, "Cork Harbour Festival Event");
+assert.match(itemListEvents[0].location, /Cork City Hall.*County Cork/i);
+
+const onlineItemListEvents = extractJsonLdEvents(
+  `
+    <script type="application/ld+json">
+      {
+        "@type": "ItemList",
+        "itemListElement": [{
+          "@type": "ListItem",
+          "item": {
+            "@type": "Event",
+            "name": "Remote Career Fair",
+            "startDate": "2026-06-06",
+            "eventAttendanceMode": "https://schema.org/OnlineEventAttendanceMode",
+            "location": "Cork"
+          }
+        }]
+      }
+    </script>
+  `,
+  normalizeSource({
+    name: "Eventbrite Cork",
+    url: "https://www.eventbrite.ie/d/ireland--cork/events/",
+    area: "county",
+    category: "festival",
+  })
+);
+assert.equal(onlineItemListEvents.length, 0, "excludes online-only recommendations from local event coverage");
 
 const eventbriteText = `
   Save this event: Castle Oliver & Ballyhoura Loop with Declan Clancy
